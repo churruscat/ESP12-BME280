@@ -12,10 +12,10 @@
 #define ORG "canMorras"
 char* ssid;
 char* password;
-char ssid1[] = "ssid1";
-char password1[] = "password1";
-char ssid2[] = "ssid2";
-char password2[] = "password2";
+char ssid1[] = "MOVISTAR_CASA";
+char password1[] = "Vivan1los2Morras";
+char ssid2[] = "MOVISTAR_CASA";
+char password2[] = "Vivan1los2Morras";
 //char ssid2[] ="MOVISTAR_E1F2";
 //char password2[] = "Vivan1los2Morras";
 /*************************************************
@@ -24,7 +24,7 @@ char password2[] = "password2";
 #define ESPERA_NOCONEX 70000  // cuando no hay conexion, descanso 70 segundos
 char server[] = "192.168.1.11";
 char * authMethod = NULL;
-char * token = NULL; 
+char * token = NULL;
 char clientId[] = "d:" ORG ":" DEVICE_TYPE ":" DEVICE_ID;
 
 char publishTopic[] = "meteo/envia";  // el dispositivo envia datos a Mosquitto
