@@ -184,13 +184,3 @@ boolean enviaDatos(char * topic, char * datosJSON) {
     DPRINTLN(".....KO envio fallado");
   return pubresult;    
 }
-
-void espera(unsigned long tEspera) {
-  uint32_t principio = millis();
-  
-  while ((millis()-principio)<tEspera) {
-    yield();
-    delay(500);
-  }
-}
-

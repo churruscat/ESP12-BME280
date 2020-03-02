@@ -13,9 +13,9 @@
 char* ssid;
 char* password;
 char ssid1[] = "MOVISTAR_CASA";
-char password1[] = "Vivan1los2Morras";
+char password1[] = "Los1Morras2somos3lo4mas";
 char ssid2[] = "MOVISTAR_CASA";
-char password2[] = "Vivan1los2Morras";
+char password2[] = "Los1Morras2somos3lo4mas";
 /*************************************************
  ** ----- Fin de Valores Personalizados ------- **
  * ***********************************************/
@@ -30,6 +30,3 @@ char metadataTopic[]= "meteo/envia/metadata"; //el dispositivo envia sus metadat
 char updateTopic[]  = "meteo/update";    // Mosquitto o node-red me actualiza los metadatos
 char responseTopic[]= "meteo/response";
 char rebootTopic[]  = "meteo/reboot";
-
-
-
