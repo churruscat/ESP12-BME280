@@ -12,11 +12,14 @@
 #define ORG "canMorras"
 char* ssid;
 char* password;
-
+/*********** personal.h should include SSID and passwords  ***********
+ *  something like: 
 char ssid1[] = "ssid1";
 char password1[] = "Password_ssid1";
 char ssid2[] = "ssid2";
 char password2[] = "Password_ssid2";
+ */
+#include "personal.h"   
 
 /*************************************************
  ** ----- Fin de Valores Personalizados ------- **
