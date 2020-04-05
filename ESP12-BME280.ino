@@ -67,9 +67,9 @@ void ICACHE_RAM_ATTR balanceoPluviometro() {
 // let's start, setup variables
 void setup() {
 boolean status;
-#ifdef CON_DEBUG
+
  Serial.begin(115200);
-#endif 
+
  DPRINTLN("starting ... "); 
  Wire.begin(SDA,SCL);
  status = sensorBME280.begin();  
@@ -182,7 +182,7 @@ void publicaDatos() {
     temperatura*=-1;  // if temp was negative, convert it positive 
   }  else signo=' ';
   // prepare the message
-  sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"hSuelo\":%d,\"hCrudo\":%d,\"HPa\":%d,\"l/m2\":%d.%3d},{\"deviceId\":\"%s\"}]",
+  sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"hSuelo\":%d,\"hCrudo\":%d,\"HPa\":%d,\"l/m2\":%d.%03d},{\"deviceId\":\"%s\"}]",
         signo,(int)temperatura, (int)(temperatura * 10.0) % 10,\
         (int)humedadAire, (int) humedadSuelo,(int)humedadCrudo,(int)presionHPa,
         (int)lluvia, (int)(lluvia * 10.0) % 10,DEVICE_ID);
