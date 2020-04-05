@@ -12,17 +12,12 @@
 #define ORG "canMorras"
 char* ssid;
 char* password;
-<<<<<<< HEAD
-char ssid1[] = "MOVISTAR_CASA";
-char password1[] = "Los1Morras2somos3lo4mas";
-char ssid2[] = "MOVISTAR_CASA";
-char password2[] = "Los1Morras2somos3lo4mas";
-=======
+
 char ssid1[] = "ssid1";
 char password1[] = "Password_ssid1";
 char ssid2[] = "ssid2";
 char password2[] = "Password_ssid2";
->>>>>>> 57dab3e46439bffd50502a423e86d0a86abb7278
+
 /*************************************************
  ** ----- Fin de Valores Personalizados ------- **
  * ***********************************************/
