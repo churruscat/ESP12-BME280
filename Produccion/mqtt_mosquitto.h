@@ -12,11 +12,15 @@
 #define ORG "canMorras"
 char* ssid;
 char* password;
+/*********** personal.h should include SSID and passwords  ***********
+ *  something like: 
 char ssid1[] = "ssid1";
-char password1[] = "password1";
+char password1[] = "Password_ssid1";
 char ssid2[] = "ssid2";
-char password2[] = "password2";
-#include <personal.h>
+char password2[] = "Password_ssid2";
+ */
+#include "personal.h"   
+
 /*************************************************
  ** ----- Fin de Valores Personalizados ------- **
  * ***********************************************/
@@ -31,6 +35,3 @@ char metadataTopic[]= "meteo/envia/metadata"; //el dispositivo envia sus metadat
 char updateTopic[]  = "meteo/update";    // Mosquitto o node-red me actualiza los metadatos
 char responseTopic[]= "meteo/response";
 char rebootTopic[]  = "meteo/reboot";
-
-
-

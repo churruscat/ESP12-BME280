@@ -12,6 +12,7 @@ int i=0,j=0;
   ssid=ssid1;
   password=password1;
  
+  if (WiFi.status() == WL_CONNECTED ) return true;  // if already connected
   DPRINT("Connecting to WiFi  "); DPRINTLN(ssid);  
   WiFi.mode(WIFI_STA);  //The 8266 is a station, not an AP 
   WiFi.disconnect();
@@ -41,49 +42,33 @@ int i=0,j=0;
       WiFi.begin(ssid,password);      
     }
   }
- 
  DPRINTLN(ssid);  DPRINT("*******Conected; ADDR= ");
  DPRINTLN(WiFi.localIP());
- 
  return true;
-}
-
-/* No connectivity; will retry */
-void sinConectividad(){
-int j=0;
-
-  clienteMQTT.disconnect(); 
-  espera(500);
-  while(!wifiConnect()) {   
-  DPRINT("No connectivity Wait for secs  ");DPRINTLN(int(intervaloConex/2000));
-  espera(ESPERA_NOCONEX);
-  }
 }
 
 /****************************************
  * connect to MQTT broker               *
  * it requires to connect to Wifi first *
  ***************************************/
-void mqttConnect() {
+boolean mqttConnect() {
  int j=0;
- 
-  if ((WiFi.status() == WL_CONNECTED )) {
-   while (!clienteMQTT.connect(clientId, authMethod, token)) {      
-     DPRINT(j);DPRINTLN("  I will retry connecting MQTT client  ");
-     j++;
-     espera(2000);
-     if (j>20) {
-       sinConectividad();  
-       j=0;
-      }
-     }
-   } else {
-    sinConectividad();   
-  } 
+  
+  wifiConnect() ;
+  while (!clienteMQTT.connect(clientId, authMethod, token)) {      
+    DPRINT(j);DPRINTLN("  I will retry connecting MQTT client  ");
+    j++;
+    espera(2000);
+    if (j>30) {
+      return false;  
+      j=0;
+    }
+  }
+  return true;
 }
 
 boolean loopMQTT() {
-return clienteMQTT.loop();
+  return clienteMQTT.loop();
 }
 
 /*************************************************************************
@@ -124,7 +109,6 @@ void handleUpdate(byte* payload) {
  boolean cambia=false,pubresult;
  char sensor[20],elpayload[150];
 
- 
  return;
 }
 
@@ -136,10 +120,11 @@ boolean enviaDatos(char * topic, char * datosJSON) {
   
  while (!clienteMQTT.loop() & k<20 ) {
     DPRINTLN("Device ws disconnected, reconnecting ");   
-    mqttConnect();
-    initManagedDevice();
-    k++; 
-  } 
+    if (mqttConnect()) {
+      initManagedDevice();
+      k++; 
+    }
+  }
   pubresult = clienteMQTT.publish(topic,datosJSON);
   DPRINT("Sending ");DPRINT(datosJson);
   DPRINT("to ");DPRINTLN(publishTopic);
@@ -156,7 +141,6 @@ void espera(unsigned long tEspera) {
   
   while ((millis()-principio)<tEspera) {
     yield();
-    delay(500);
+    delay(50);
   }
 }
-
