@@ -48,23 +48,39 @@ int i=0,j=0;
 }
 
 /****************************************
+ There is no connectivity , correct situation 
+******************************************/
+void sinConectividad(){
+int j=0;
+
+  clienteMQTT.disconnect(); 
+  espera(500);
+  while(!wifiConnect()) {   
+  DPRINT("Sin conectividad, espero secs  ");DPRINTLN(int(intervaloConex/2000));
+  espera(ESPERA_NOCONEX);
+  }
+}
+
+/****************************************
  * connect to MQTT broker               *
  * it requires to connect to Wifi first *
  ***************************************/
-boolean mqttConnect() {
+void mqttConnect() {
  int j=0;
-  
-  wifiConnect() ;
-  while (!clienteMQTT.connect(clientId, authMethod, token)) {      
-    DPRINT(j);DPRINTLN("  I will retry connecting MQTT client  ");
-    j++;
-    espera(2000);
-    if (j>30) {
-      return false;  
-      j=0;
-    }
-  }
-  return true;
+ 
+  if ((WiFi.status() == WL_CONNECTED )) {
+   while (!clienteMQTT.connect(clientId, authMethod, token)) {      
+     DPRINT(j);DPRINTLN("  Retry connection to MQTT  ");
+     j++;
+     espera(2000);
+     if (j>20) {
+       sinConectividad();  
+       j=0;
+      }
+     }
+   } else {
+    sinConectividad();   
+  } 
 }
 
 boolean loopMQTT() {
@@ -119,11 +135,10 @@ boolean enviaDatos(char * topic, char * datosJSON) {
   boolean pubresult=false;  
   
  while (!clienteMQTT.loop() & k<20 ) {
-    DPRINTLN("Device ws disconnected, reconnecting ");   
-    if (mqttConnect()) {
-      initManagedDevice();
-      k++; 
-    }
+    DPRINTLN("Device was disconnected, reconnecting ");   
+    mqttConnect();
+    initManagedDevice();
+    k++; 
   }
   pubresult = clienteMQTT.publish(topic,datosJSON);
   DPRINT("Sending ");DPRINT(datosJson);

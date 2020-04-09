@@ -86,7 +86,11 @@ boolean status;
  espera(1000);
  humedadCrudo2 = analogRead(sensorPin);  //second read
  digitalWrite(CONTROL_HUMEDAD, LOW);
- publicaDatos();       // and publish data. This is the function that gets and sends
+ wifiConnect();
+ mqttConnect();
+ delay(50);
+ initManagedDevice(); 
+ publicaDatos();      // and publish data. This is the function that gets and sends
 }
 
 uint32_t ultima=0;
@@ -95,47 +99,60 @@ void loop() {
  DPRINT("*");
  if (!loopMQTT()) {  // Check if there are MQTT messages and if the device is connected  
    DPRINTLN("Connection lost; retrying");
+   sinConectividad();        
+   mqttConnect();
    mqttConnect();   // and MQTT environment 
  } 
  if ((millis()-ultima)>intervaloConex) {   // if it is time to send data, do it
    DPRINT("interval:");DPRINT(intervaloConex);
    DPRINT("\tmillis :");DPRINT(millis());
    DPRINT("\tultima :");DPRINTLN(ultima);
-   publicaDatos();        // publish data. This is the function that gets and sends
+   while (!publicaDatos()) {     // repeat untiel publicadatos sends data
+      espera(1000);        // publish data. This is the function that gets and sends
+   }   
    ultima=millis();
  }
  espera(1000); //and wait
 }
 
-/* this function sends data to MQTT broker, 
-first, it calls to tomaDatos() to read data */
-void publicaDatos() {
+/****************************************** 
+* this function sends data to MQTT broker, 
+* first, it calls to tomaDatos() to read data 
+*********************************************/
+boolean publicaDatos() {
   int k=0;
   char signo;
   boolean pubresult=true;  
  
   while(!tomaDatos()) {   // if tomaDatos() returns false, retry 30 times 
-     espera(1000);        // waiting 1 sec between iterations
-     if(k++>30) {         // after 30 iterations with no data, 
+    espera(1000);        // waiting 1 sec between iterations
+    if(k++>30) {         // after 30 iterations with no data, 
       sprintf(datosJson,"[{\"temp\":\"error\"},{\"deviceId\":\"%s\"}]",DEVICE_ID);
-      pubresult = enviaDatos(publishTopic,datosJson);
-      return;             // send error and return
-     }
+    } else {
+      // Data is read an stored in global var. Prepare data in JSON mode
+      if (temperatura<0) {  // to avoid probles with sign
+        signo='-';          // if negative , set '-' character
+        temperatura*=-1;  // if temp was negative, convert it positive 
+      }  else signo=' ';
+      // prepare the message
+      #ifdef CON_LLUVIA
+         sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"hSuelo\":%d,\"hCrudo\":%d,\"HPa\":%d,\"l/m2\":%d.%03d},{\"deviceId\":\"%s\"}]",
+               signo,(int)temperatura, (int)(temperatura * 10.0) % 10,\
+               (int)humedadAire, (int) humedadSuelo,(int)humedadCrudo,(int)presionHPa,
+               (int)lluvia, (int)(lluvia * 1000) % 1000,DEVICE_ID);
+      #else
+         sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"hSuelo\":%d,\"hCrudo\":%d,\"HPa\":%d},{\"deviceId\":\"%s\"}]",
+               signo,(int)temperatura, (int)(temperatura * 10.0) % 10,\
+               (int)humedadAire, (int) humedadSuelo,(int)humedadCrudo,(int)presionHPa,
+               DEVICE_ID);  
+      #endif     
   }
-  // Data is read an stored in global var. Prepare data in JSON mode
-  if (temperatura<0) {  // to avoid probles with sign
-    signo='-';          // if negative , set '-' character
-    temperatura*=-1;  // if temp was negative, convert it positive 
-  }  else signo=' ';
-  // prepare the message
-  sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"hSuelo\":%d,\"hCrudo\":%d,\"HPa\":%d,\"l/m2\":%d.%03d},{\"deviceId\":\"%s\"}]",
-        signo,(int)temperatura, (int)(temperatura * 10.0) % 10,\
-        (int)humedadAire, (int) humedadSuelo,(int)humedadCrudo,(int)presionHPa,
-        (int)lluvia, (int)(lluvia * 1000) % 1000,DEVICE_ID);
   // and publish them.
-  pubresult = enviaDatos(publishTopic,datosJson);
-  if (pubresult) 
-    {lluvia=0;}      // I sent data was successful, set rain to zero 
+  pubresult = enviaDatos(publishTopic,datosJson);    
+  if (pubresult){
+    lluvia=0;}      // I sent data was successful, set rain to zero 
+  }
+  return pubresult;
 }
 
 
