@@ -1,5 +1,5 @@
-#define DEVICE_ID "Jardin"
-#define TOKEN "Token-del-Jardin"
+#define DEVICE_ID "Pruebas"
+#define TOKEN "Token-de-Pruebas"
 #undef CON_LLUVIA
 #define CON_SUELO   // con sensor de humedad del suelo
 #define HUMEDAD_MIN  50  // valores de A0 para suelo seco y empapado

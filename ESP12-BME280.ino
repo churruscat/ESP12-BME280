@@ -123,10 +123,7 @@ boolean publicaDatos() {
   int k=0;
   char signo;
   boolean pubresult=true;
-   
-
-   DPRINTLN("entro en publicadatos");
-   
+     
    if (!tomaDatos()) { 
       sprintf(datosJson,"[{\"temp\":\"error\"},{\"deviceId\":\"%s\"}]",DEVICE_ID);
     } else {
@@ -157,7 +154,6 @@ boolean publicaDatos() {
   return pubresult;
 }
 
-
 /* get data function. Read the sensors and set values in global variables */
 /* get data function. Read the sensors and set values in global variables */
 boolean tomaDatos (){
@@ -185,8 +181,8 @@ boolean tomaDatos (){
     bufTemp1= sensorBME280.readTemperature();
     bufPresion1= sensorBME280.readPressure()/100.0F;
     DPRINTLN("Data read"); 
-    lluvia+=contadorPluvi*L_POR_BALANCEO;
     detachInterrupt(digitalPinToInterrupt(interruptPin));
+    lluvia+=contadorPluvi*L_POR_BALANCEO;
     contadorPluvi=0;
     attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, RISING);
     if (humedadMin==humedadMax) humedadMax+=1; 

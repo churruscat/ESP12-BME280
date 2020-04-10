@@ -69,7 +69,8 @@ void mqttConnect() {
  int j=0;
  
   if ((WiFi.status() == WL_CONNECTED )) {
-   while (!clienteMQTT.connect(clientId, authMethod, token)) {      
+   while (!clienteMQTT.connect(clientId, authMethod, token)) {
+     if (WiFi.status() != WL_CONNECTED ) sinConectividad();      
      DPRINT(j);DPRINTLN("  Retry connection to MQTT  ");
      j++;
      espera(2000);
