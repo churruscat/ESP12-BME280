@@ -1,3 +1,4 @@
+#define LOCATION "Pozuelo"
 #define DEVICE_ID "Jardin"
 #define TOKEN "Token-del-Jardin"
 #undef CON_LLUVIA

@@ -26,6 +26,9 @@
 //#include "jardin.h"
 #include "terraza.h"
 #include "mqtt_mosquitto.h"  /* mqtt values */
+#include <ESP8266mDNS.h>
+#include <WiFiUdp.h>
+#include <ArduinoOTA.h>
 
 /*************************************************
  ** ----- End of Personalised values ------- **
@@ -35,7 +38,7 @@
 #define SCL D6
 #define interruptPin D7 // PIN where I'll connect the rain gauge
 #define sensorPin    A0  // analog PIN  of Soil humidity sensor
-#define CONTROL_HUMEDAD D2  // Transistor base that switchs on and off soil sensor
+#define CONTROL_HUMEDAD D2  // Transistor base that switches on&off soil sensor
 #define L_POR_BALANCEO 0.2794 // liter/m2 for evey rain gauge interrupt
 #include <Wire.h>             //libraries for sensors and so on
 #include <Adafruit_Sensor.h>
@@ -88,6 +91,42 @@ boolean status;
  digitalWrite(CONTROL_HUMEDAD, LOW);
  wifiConnect();
  mqttConnect();
+ DPRINTLN(" los dos connect hechos, ahora OTA");
+ ArduinoOTA.setHostname(DEVICE_ID); 
+ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH) {
+      type = "sketch";
+    } else { // U_FS
+      type = "filesystem";
+    }
+
+    // NOTE: if updating FS this would be the place to unmount FS using FS.end()
+    DPRINTLN("Start updating " + type);
+  });
+  ArduinoOTA.onEnd([]() {
+    DPRINTLN("\nEnd");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    #ifdef PRINT_SI
+    Serial.printf("Error[%u]: ", error);
+    #endif
+    if (error == OTA_AUTH_ERROR) {
+      DPRINTLN("Auth Failed");
+    } else if (error == OTA_BEGIN_ERROR) {
+      DPRINTLN("Begin Failed");
+    } else if (error == OTA_CONNECT_ERROR) {
+      DPRINTLN("Connect Failed");
+    } else if (error == OTA_RECEIVE_ERROR) {
+      DPRINTLN("Receive Failed");
+    } else if (error == OTA_END_ERROR) {
+      DPRINTLN("End Failed");
+    }
+  });
+ ArduinoOTA.begin(); 
  delay(50);
  initManagedDevice(); 
  publicaDatos();      // and publish data. This is the function that gets and sends
@@ -102,7 +141,8 @@ void loop() {
    sinConectividad();        
    mqttConnect();
    mqttConnect();   // and MQTT environment 
- } 
+ }
+ ArduinoOTA.handle(); 
  if ((millis()-ultima)>intervaloConex) {   // if it is time to send data, do it
    DPRINT("interval:");DPRINT(intervaloConex);
    DPRINT("\tmillis :");DPRINT(millis());
@@ -135,14 +175,13 @@ boolean publicaDatos() {
       // prepare the message
       #ifdef CON_LLUVIA
          sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"hSuelo\":%d,\"hCrudo\":%d,\"HPa\":%d,\"l/m2\":%d.%03d},{\"deviceId\":\"%s\"}]",
-               signo,(int)temperatura, (int)(temperatura * 10.0) % 10,\
-               (int)humedadAire, (int) humedadSuelo,(int)humedadCrudo,(int)presionHPa,
-               (int)lluvia, (int)(lluvia * 1000) % 1000,DEVICE_ID);
+                 signo,(int)temperatura, (int)(temperatura * 10.0) % 10,
+                 (int) humedadAire, (int) humedadSuelo,(int) humedadCrudo,(int) presionHPa,
+                 (int)lluvia, (int)(lluvia * 1000) % 1000,DEVICE_ID);
       #else
          sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"hSuelo\":%d,\"hCrudo\":%d,\"HPa\":%d},{\"deviceId\":\"%s\"}]",
-               signo,(int)temperatura, (int)(temperatura * 10.0) % 10,\
-               (int)humedadAire, (int) humedadSuelo,(int)humedadCrudo,(int)presionHPa,
-               DEVICE_ID);  
+                signo,(int)temperatura, (int)(temperatura * 10.0) % 10,\
+                (int)humedadAire, (int) humedadSuelo,(int)humedadCrudo,(int)presionHPa,DEVICE_ID);  
       #endif     
   }
   // and publish them.
@@ -187,9 +226,11 @@ boolean tomaDatos (){
     attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, RISING);
     if (humedadMin==humedadMax) humedadMax+=1; 
     humedadSuelo = map(humedadCrudo,humedadMin,humedadMax,0,100);
-    /* if data could not be read for whatever reason, raise a message (in CONDEBUG mode) 
+    /* if data could not be read for whatever reason, raise a message (in PRINT_SI mode) 
       Else calculate the mean */
-    if (isnan(bufHumedad) || isnan(bufTemp) || isnan(bufHumedad1) || isnan(bufTemp1) ) {       
+    if (isnan(bufHumedad) || isnan(bufHumedad1) ||
+        isnan(bufPresion) || isnan(bufPresion1) ||
+        isnan(bufTemp)    || isnan(bufTemp1)    ) {       
        DPRINTLN("I could not read from BME280msensor!");       
        escorrecto=false;    // flag that BME280 could not read
     } else {

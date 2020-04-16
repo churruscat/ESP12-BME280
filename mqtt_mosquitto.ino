@@ -121,8 +121,7 @@ void funcallback(char* topic, byte* payload, unsigned int payloadLength) {
 }
 
 void handleUpdate(byte* payload) {
- StaticJsonBuffer<JSONBUFFSIZE> jsonBuffer; 
- JsonObject& root = jsonBuffer.parseObject((char*)payload);
+ 
  boolean cambia=false,pubresult;
  char sensor[20],elpayload[150];
 

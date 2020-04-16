@@ -24,7 +24,7 @@ char password2[] = "Password_ssid2";
 /*************************************************
  ** ----- Fin de Valores Personalizados ------- **
  * ***********************************************/
-#define ESPERA_NOCONEX 70000  // cuando no hay conexion, descanso 70 segundos
+#define ESPERA_NOCONEX 30000  // cuando no hay conexion, descanso 70 segundos
 char server[] = "192.168.1.11";
 char * authMethod = NULL;
 char * token = NULL;

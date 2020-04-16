@@ -2,14 +2,12 @@
 #define MQTT_MAX_PACKET_SIZE 455 //cambialo antes de incluir docpatth\Arduino\libraries\pubsubclient-master\src\pubsubclient.h
 #define MQTT_KEEP_ALIVE 60
 #include <PubSubClient.h> // https://github.com/knolleary/pubsubclient/releases/tag/v2.3
-#include <ArduinoJson.h> // https://github.com/bblanchon/ArduinoJson/releases/tag/v5.0.7
 #include <Pin_NodeMCU.h>
 
 /*************************************************
  ** -------- Valores Personalizados ----------- **
  * ***********************************************/
 #define DEVICE_TYPE "ESP12E-Riego"
-#define ORG "canMorras"
 char* ssid;
 char* password;
 /*********** personal.h should include SSID and passwords  ***********
@@ -24,14 +22,14 @@ char password2[] = "Password_ssid2";
 /*************************************************
  ** ----- Fin de Valores Personalizados ------- **
  * ***********************************************/
-#define ESPERA_NOCONEX 30000  // cuando no hay conexion, descanso 70 segundos
+#define ESPERA_NOCONEX 30000  // When no conection, wait 30 sec
 char server[] = "192.168.1.11";
 char * authMethod = NULL;
 char * token = NULL;
-char clientId[] = "d:" ORG ":" DEVICE_TYPE ":" DEVICE_ID;
+char clientId[] = "d:" LOCATION":" DEVICE_TYPE ":" DEVICE_ID;
 
-char publishTopic[] = "meteo/envia";  // el dispositivo envia datos a Mosquitto
-char metadataTopic[]= "meteo/envia/metadata"; //el dispositivo envia sus metadatos a Mosquitto
-char updateTopic[]  = "meteo/update";    // Mosquitto o node-red me actualiza los metadatos
+char publishTopic[] = "meteo/envia";  // device send data to mqtt
+char metadataTopic[]= "meteo/envia/metadata"; //device send metadata to mqtt
+char updateTopic[]  = "meteo/update";    // device metadata is to be updated
 char responseTopic[]= "meteo/response";
 char rebootTopic[]  = "meteo/reboot";

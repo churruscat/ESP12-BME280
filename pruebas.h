@@ -1,3 +1,4 @@
+#define LOCATION "LugarDePrueba"
 #define DEVICE_ID "Pruebas"
 #define TOKEN "Token-de-Pruebas"
 #undef CON_LLUVIA

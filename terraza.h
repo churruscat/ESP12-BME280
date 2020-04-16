@@ -1,3 +1,4 @@
+#define LOCATION "Pozuelo"
 #define DEVICE_ID "Terraza"
 #define TOKEN "Token-dela-Terraza"
 #define CON_SUELO   // con sensor de humedad del suelo
