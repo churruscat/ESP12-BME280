@@ -93,7 +93,7 @@ boolean status;
  mqttConnect();
  DPRINTLN(" los dos connect hechos, ahora OTA");
  ArduinoOTA.setHostname(DEVICE_ID); 
-ArduinoOTA.onStart([]() {
+ ArduinoOTA.onStart([]() {
     String type;
     if (ArduinoOTA.getCommand() == U_FLASH) {
       type = "sketch";
@@ -103,14 +103,14 @@ ArduinoOTA.onStart([]() {
 
     // NOTE: if updating FS this would be the place to unmount FS using FS.end()
     DPRINTLN("Start updating " + type);
-  });
-  ArduinoOTA.onEnd([]() {
+ });
+ ArduinoOTA.onEnd([]() {
     DPRINTLN("\nEnd");
-  });
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+ });
+ ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
     Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-  });
-  ArduinoOTA.onError([](ota_error_t error) {
+ });
+ ArduinoOTA.onError([](ota_error_t error) {
     #ifdef PRINT_SI
     Serial.printf("Error[%u]: ", error);
     #endif
@@ -125,7 +125,7 @@ ArduinoOTA.onStart([]() {
     } else if (error == OTA_END_ERROR) {
       DPRINTLN("End Failed");
     }
-  });
+ });
  ArduinoOTA.begin(); 
  delay(50);
  initManagedDevice(); 
@@ -140,7 +140,6 @@ void loop() {
    DPRINTLN("Connection lost; retrying");
    sinConectividad();        
    mqttConnect();
-   mqttConnect();   // and MQTT environment 
  }
  ArduinoOTA.handle(); 
  if ((millis()-ultima)>intervaloConex) {   // if it is time to send data, do it

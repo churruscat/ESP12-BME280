@@ -12,10 +12,13 @@ int i=0,j=0;
   ssid=ssid1;
   password=password1;
  
-  if (WiFi.status() == WL_CONNECTED ) return true;  // if already connected
+  // if (WiFi.status() == WL_CONNECTED ) return true;  // if already connected
   DPRINT("Connecting to WiFi  "); DPRINTLN(ssid);  
+  WiFi.mode(WIFI_OFF);
+  delay(1000);
   WiFi.mode(WIFI_STA);  //The 8266 is a station, not an AP 
-  WiFi.disconnect();
+  //WiFi.disconnect();
+  delay(1000);
   WiFi.begin(ssid,password);
  
   while ((WiFi.status() != WL_CONNECTED )) {
@@ -32,12 +35,13 @@ int i=0,j=0;
       }
       i=0;
       j++;
-      if (j>4) { return false;} /* none of Wifi work */
-     
+      if (j>4) { return false;} /* none Wifi works */     
       DPRINTLN();
       DPRINT("Try with other network ");DPRINTLN(j);      
       DPRINT("I will try to connect to "); DPRINTLN(ssid);
-      WiFi.disconnect();
+      WiFi.mode(WIFI_OFF);
+      delay(1000);
+      WiFi.mode(WIFI_STA);  //The 8266 is a station, not an AP 
       espera(1000);
       WiFi.begin(ssid,password);      
     }
