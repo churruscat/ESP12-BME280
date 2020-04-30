@@ -10,6 +10,7 @@
 */
 
 #define PRINT_SI
+#undef PRINT_SI
 #ifdef PRINT_SI
 #define DPRINT(...)    Serial.print(__VA_ARGS__)
 #define DPRINTLN(...)  Serial.println(__VA_ARGS__)
@@ -21,7 +22,7 @@
  ** -------- Personalised values ----------- **
  * *****************************************/
 /* select sensor and its values */ 
-//#include "Pruebas.h"  
+//#include "pruebas.h"  
 //#include "salon.h"
 //#include "jardin.h"
 #include "terraza.h"
@@ -57,7 +58,7 @@ volatile int contadorPluvi = 0; // must be 'volatile',for counting interrupt
 float temperatura,humedadAire,presionHPa,lluvia=0,sensacion=20;
 int humedadMin=HUMEDAD_MIN,
     humedadMax=HUMEDAD_MAX,
-    humedadSuelo,humedadCrudo;
+    humedadSuelo=0,humedadCrudo=HUMEDAD_MIN;
 int humedadCrudo1,humedadCrudo2,
     intervaloConex=INTERVALO_CONEX;
 char datosJson[DATOSJSONSIZE];
@@ -128,7 +129,6 @@ boolean status;
  });
  ArduinoOTA.begin(); 
  delay(50);
- initManagedDevice(); 
  publicaDatos();      // and publish data. This is the function that gets and sends
 }
 
@@ -163,7 +163,7 @@ boolean publicaDatos() {
   char signo;
   boolean pubresult=true;
      
-   if (!tomaDatos()) { 
+  if (!tomaDatos()) { 
       sprintf(datosJson,"[{\"temp\":\"error\"},{\"deviceId\":\"%s\"}]",DEVICE_ID);
     } else {
       // Data is read an stored in global var. Prepare data in JSON mode
@@ -204,27 +204,29 @@ boolean tomaDatos (){
     bufHumedad= sensorBME280.readHumidity();   
     bufTemp= sensorBME280.readTemperature();
     bufPresion=sensorBME280.readPressure()/100.0F;
-    /* activate soil sensor setting the transistor base */
-    digitalWrite(CONTROL_HUMEDAD, HIGH);
-    espera(10000);  
-    humedadCrudo = analogRead(sensorPin); // and read soil moisture
-    humedadCrudo=constrain(humedadCrudo,humedadMin,humedadMax); 
-    digitalWrite(CONTROL_HUMEDAD, LOW);  // disconnect soil sensor
-    // calculate the moving average of soil humidity of last three values 
-    humedadCrudo=(humedadCrudo1+humedadCrudo2+humedadCrudo)/3;
-    humedadCrudo2=humedadCrudo1;
-    humedadCrudo1=humedadCrudo;
+    #ifdef CON_SUELO
+      /* activate soil sensor setting the transistor base */
+      digitalWrite(CONTROL_HUMEDAD, HIGH);
+      espera(10000);  
+      humedadCrudo = analogRead(sensorPin); // and read soil moisture
+      humedadCrudo=constrain(humedadCrudo,humedadMin,humedadMax); 
+      digitalWrite(CONTROL_HUMEDAD, LOW);  // disconnect soil sensor
+      // calculate the moving average of soil humidity of last three values 
+      humedadCrudo=(humedadCrudo1+humedadCrudo2+humedadCrudo)/3;
+      humedadSuelo = map(humedadCrudo,humedadMin,humedadMax,0,100);
+      humedadCrudo2=humedadCrudo1;
+      humedadCrudo1=humedadCrudo;
+    #endif
     // read again from BME280 sensor
     bufHumedad1= sensorBME280.readHumidity();
     bufTemp1= sensorBME280.readTemperature();
     bufPresion1= sensorBME280.readPressure()/100.0F;
     DPRINTLN("Data read"); 
-    detachInterrupt(digitalPinToInterrupt(interruptPin));
+    //detachInterrupt(digitalPinToInterrupt(interruptPin));
     lluvia+=contadorPluvi*L_POR_BALANCEO;
     contadorPluvi=0;
-    attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, RISING);
+    //attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, RISING);
     if (humedadMin==humedadMax) humedadMax+=1; 
-    humedadSuelo = map(humedadCrudo,humedadMin,humedadMax,0,100);
     /* if data could not be read for whatever reason, raise a message (in PRINT_SI mode) 
       Else calculate the mean */
     if (isnan(bufHumedad) || isnan(bufHumedad1) ||

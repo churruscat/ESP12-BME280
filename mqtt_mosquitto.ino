@@ -17,15 +17,14 @@ int i=0,j=0;
   WiFi.mode(WIFI_OFF);
   delay(1000);
   WiFi.mode(WIFI_STA);  //The 8266 is a station, not an AP 
-  //WiFi.disconnect();
   delay(1000);
   WiFi.begin(ssid,password);
- 
+
   while ((WiFi.status() != WL_CONNECTED )) {
     espera(500);
     DPRINT(i++);
     DPRINT(".");   
-    if (i>120) { 
+    if (i>60) { 
       if (ssid==ssid1){
         ssid=ssid2;
         password=password2;
@@ -35,7 +34,7 @@ int i=0,j=0;
       }
       i=0;
       j++;
-      if (j>4) { return false;} /* none Wifi works */     
+      if (j>8) { return false;} /* none Wifi works */     
       DPRINTLN();
       DPRINT("Try with other network ");DPRINTLN(j);      
       DPRINT("I will try to connect to "); DPRINTLN(ssid);
@@ -46,9 +45,9 @@ int i=0,j=0;
       WiFi.begin(ssid,password);      
     }
   }
- DPRINTLN(ssid);  DPRINT("*******Conected; ADDR= ");
- DPRINTLN(WiFi.localIP());
- return true;
+  DPRINTLN(ssid);  DPRINT("*******Conected; ADDR= ");
+  DPRINTLN(WiFi.localIP());
+  return true;
 }
 
 /****************************************
@@ -60,8 +59,8 @@ int j=0;
   clienteMQTT.disconnect(); 
   espera(500);
   while(!wifiConnect()) {   
-  DPRINT("Sin conectividad, espero secs  ");DPRINTLN(int(intervaloConex/2000));
-  espera(ESPERA_NOCONEX);
+    DPRINT("Sin conectividad, espero secs  ");DPRINTLN(int(intervaloConex/2000));
+    espera(ESPERA_NOCONEX);
   }
 }
 
@@ -85,7 +84,8 @@ void mqttConnect() {
      }
    } else {
     sinConectividad();   
-  } 
+  }
+  initManagedDevice(); 
 }
 
 boolean loopMQTT() {
