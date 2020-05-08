@@ -10,7 +10,6 @@
 */
 
 #define PRINT_SI
-#undef PRINT_SI
 #ifdef PRINT_SI
 #define DPRINT(...)    Serial.print(__VA_ARGS__)
 #define DPRINTLN(...)  Serial.println(__VA_ARGS__)
@@ -62,74 +61,77 @@ int humedadMin=HUMEDAD_MIN,
 int humedadCrudo1,humedadCrudo2,
     intervaloConex=INTERVALO_CONEX;
 char datosJson[DATOSJSONSIZE];
-
-// Interrupt counter for rain gauge
-void ICACHE_RAM_ATTR balanceoPluviometro() {  
+#ifdef CON_LLUVIA
+  // Interrupt counter for rain gauge
+  void ICACHE_RAM_ATTR balanceoPluviometro() {  
   contadorPluvi++;
 }
+#endif
 
 // let's start, setup variables
 void setup() {
 boolean status;
 
- Serial.begin(115200);
+  Serial.begin(115200);
 
- DPRINTLN("starting ... "); 
- Wire.begin(SDA,SCL);
- status = sensorBME280.begin();  
- if (!status) {
-   DPRINTLN("Can't connect to BME Sensor!  ");    
- }
- /* start PINs first soil Humidity, then Pluviometer */
- pinMode(CONTROL_HUMEDAD,OUTPUT);
- pinMode(interruptPin, INPUT);
- attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, RISING);
- digitalWrite(CONTROL_HUMEDAD, HIGH); // prepare to read soil humidity sensor
- espera(1000);
- humedadCrudo1 = analogRead(sensorPin); //first read to have date to get averages
- espera(1000);
- humedadCrudo2 = analogRead(sensorPin);  //second read
- digitalWrite(CONTROL_HUMEDAD, LOW);
- wifiConnect();
- mqttConnect();
- DPRINTLN(" los dos connect hechos, ahora OTA");
- ArduinoOTA.setHostname(DEVICE_ID); 
- ArduinoOTA.onStart([]() {
-    String type;
-    if (ArduinoOTA.getCommand() == U_FLASH) {
-      type = "sketch";
-    } else { // U_FS
-      type = "filesystem";
-    }
+   DPRINTLN("starting ... "); 
+   Wire.begin(SDA,SCL);
+   status = sensorBME280.begin();  
+   if (!status) {
+     DPRINTLN("Can't connect to BME Sensor!  ");    
+   }
+   /* start PINs first soil Humidity, then Pluviometer */
+   pinMode(CONTROL_HUMEDAD,OUTPUT);
+   #ifdef CON_LLUVIA
+    pinMode(interruptPin, INPUT);
+    attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, RISING);
+   #endif
+   digitalWrite(CONTROL_HUMEDAD, HIGH); // prepare to read soil humidity sensor
+   espera(1000);
+   humedadCrudo1 = analogRead(sensorPin); //first read to have date to get averages
+   espera(1000);
+   humedadCrudo2 = analogRead(sensorPin);  //second read
+   digitalWrite(CONTROL_HUMEDAD, LOW);
+   wifiConnect();
+   mqttConnect();
+   DPRINTLN(" los dos connect hechos, ahora OTA");
+   ArduinoOTA.setHostname(DEVICE_ID); 
+   ArduinoOTA.onStart([]() {
+      String type;
+      if (ArduinoOTA.getCommand() == U_FLASH) {
+        type = "sketch";
+      } else { // U_FS
+        type = "filesystem";
+      }
 
-    // NOTE: if updating FS this would be the place to unmount FS using FS.end()
-    DPRINTLN("Start updating " + type);
- });
- ArduinoOTA.onEnd([]() {
-    DPRINTLN("\nEnd");
- });
- ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
- });
- ArduinoOTA.onError([](ota_error_t error) {
-    #ifdef PRINT_SI
-    Serial.printf("Error[%u]: ", error);
-    #endif
-    if (error == OTA_AUTH_ERROR) {
-      DPRINTLN("Auth Failed");
-    } else if (error == OTA_BEGIN_ERROR) {
-      DPRINTLN("Begin Failed");
-    } else if (error == OTA_CONNECT_ERROR) {
-      DPRINTLN("Connect Failed");
-    } else if (error == OTA_RECEIVE_ERROR) {
-      DPRINTLN("Receive Failed");
-    } else if (error == OTA_END_ERROR) {
-      DPRINTLN("End Failed");
-    }
- });
- ArduinoOTA.begin(); 
- delay(50);
- publicaDatos();      // and publish data. This is the function that gets and sends
+      // NOTE: if updating FS this would be the place to unmount FS using FS.end()
+      DPRINTLN("Start updating " + type);
+   });
+   ArduinoOTA.onEnd([]() {
+      DPRINTLN("\nEnd");
+   });
+   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+   });
+   ArduinoOTA.onError([](ota_error_t error) {
+      #ifdef PRINT_SI
+      Serial.printf("Error[%u]: ", error);
+      #endif
+      if (error == OTA_AUTH_ERROR) {
+        DPRINTLN("Auth Failed");
+      } else if (error == OTA_BEGIN_ERROR) {
+        DPRINTLN("Begin Failed");
+      } else if (error == OTA_CONNECT_ERROR) {
+        DPRINTLN("Connect Failed");
+      } else if (error == OTA_RECEIVE_ERROR) {
+        DPRINTLN("Receive Failed");
+      } else if (error == OTA_END_ERROR) {
+        DPRINTLN("End Failed");
+      }
+   });
+   ArduinoOTA.begin(); 
+   delay(50);
+   publicaDatos();      // and publish data. This is the function that gets and sends
 }
 
 uint32_t ultima=0;
@@ -173,14 +175,27 @@ boolean publicaDatos() {
       }  else signo=' ';
       // prepare the message
       #ifdef CON_LLUVIA
+        #ifdef CON_SUELO
          sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"hSuelo\":%d,\"hCrudo\":%d,\"HPa\":%d,\"l/m2\":%d.%03d},{\"deviceId\":\"%s\"}]",
                  signo,(int)temperatura, (int)(temperatura * 10.0) % 10,
                  (int) humedadAire, (int) humedadSuelo,(int) humedadCrudo,(int) presionHPa,
                  (int)lluvia, (int)(lluvia * 1000) % 1000,DEVICE_ID);
+        #else
+         sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"HPa\":%d,\"l/m2\":%d.%03d},{\"deviceId\":\"%s\"}]",
+                 signo,(int)temperatura, (int)(temperatura * 10.0) % 10,
+                 (int) humedadAire,(int) presionHPa,
+                 (int)lluvia, (int)(lluvia * 1000) % 1000,DEVICE_ID);
+        #endif                  
       #else
-         sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"hSuelo\":%d,\"hCrudo\":%d,\"HPa\":%d},{\"deviceId\":\"%s\"}]",
+          #ifdef CON_SUELO
+            sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"hSuelo\":%d,\"hCrudo\":%d,\"HPa\":%d},{\"deviceId\":\"%s\"}]",
                 signo,(int)temperatura, (int)(temperatura * 10.0) % 10,\
                 (int)humedadAire, (int) humedadSuelo,(int)humedadCrudo,(int)presionHPa,DEVICE_ID);  
+          #else      
+            sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"HPa\":%d},{\"deviceId\":\"%s\"}]",
+                signo,(int)temperatura, (int)(temperatura * 10.0) % 10,\
+                (int)humedadAire, (int)presionHPa,DEVICE_ID);  
+          #endif
       #endif     
   }
   // and publish them.
@@ -221,11 +236,13 @@ boolean tomaDatos (){
     bufHumedad1= sensorBME280.readHumidity();
     bufTemp1= sensorBME280.readTemperature();
     bufPresion1= sensorBME280.readPressure()/100.0F;
-    DPRINTLN("Data read"); 
-    //detachInterrupt(digitalPinToInterrupt(interruptPin));
-    lluvia+=contadorPluvi*L_POR_BALANCEO;
-    contadorPluvi=0;
-    //attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, RISING);
+    DPRINTLN("Data read");
+    #ifdef CON_LLUVIA 
+      //detachInterrupt(digitalPinToInterrupt(interruptPin));
+      lluvia+=contadorPluvi*L_POR_BALANCEO;
+      contadorPluvi=0;
+      //attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, RISING);
+    #endif
     if (humedadMin==humedadMax) humedadMax+=1; 
     /* if data could not be read for whatever reason, raise a message (in PRINT_SI mode) 
       Else calculate the mean */

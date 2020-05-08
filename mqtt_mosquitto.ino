@@ -13,7 +13,8 @@ int i=0,j=0;
   password=password1;
  
   // if (WiFi.status() == WL_CONNECTED ) return true;  // if already connected
-  DPRINT("Connecting to WiFi  "); DPRINTLN(ssid);  
+  DPRINT("Connecting to WiFi  "); DPRINTLN(ssid); 
+  WiFi.persistent(false); 
   WiFi.mode(WIFI_OFF);
   delay(1000);
   WiFi.mode(WIFI_STA);  //The 8266 is a station, not an AP 
