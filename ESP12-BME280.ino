@@ -56,7 +56,7 @@ volatile int contadorPluvi = 0; // must be 'volatile',for counting interrupt
 /* ********* these are the sensor variables that will be exposed **********/ 
 float temperatura,humedadAire,presionHPa,lluvia=0,sensacion=20;
 int humedadMin=HUMEDAD_MIN,
-    humedadMax=HUMEDAD_MAX,
+    humedadMax=HUMEDAD_MAX, 
     humedadSuelo=0,humedadCrudo=HUMEDAD_MIN;
 int humedadCrudo1,humedadCrudo2,
     intervaloConex=INTERVALO_CONEX;

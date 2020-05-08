@@ -1,2 +1,2 @@
-# Meteo BME280
- Meteo station. Temp, humidity, pressure
+# ESP12-BME280
+ 
