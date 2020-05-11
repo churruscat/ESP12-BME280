@@ -169,7 +169,7 @@ boolean publicaDatos() {
       sprintf(datosJson,"[{\"temp\":\"error\"},{\"deviceId\":\"%s\"}]",DEVICE_ID);
     } else {
       // Data is read an stored in global var. Prepare data in JSON mode
-      if (temperatura<0) {  // to avoid probles with sign
+      if (temperatura<0) {  // to avoid problems with sign
         signo='-';          // if negative , set '-' character
         temperatura*=-1;  // if temp was negative, convert it positive 
       }  else signo=' ';
@@ -260,7 +260,7 @@ boolean tomaDatos (){
       if ((humedadAire>101)||(humedadAire<0)) escorrecto=false;    // or humidity      
     } 
     if (i++>30) {
-      return escorrecto;
+      return false;
     }  
     espera(1000);
   }
