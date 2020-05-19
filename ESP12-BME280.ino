@@ -233,9 +233,9 @@ boolean tomaDatos (){
       humedadCrudo1=humedadCrudo;
     #endif
     // read again from BME280 sensor
-    bufHumedad1= sensorBME280.readHumidity();
-    bufTemp1= sensorBME280.readTemperature();
-    bufPresion1= sensorBME280.readPressure()/100.0F;
+    humedadAire= sensorBME280.readHumidity();
+    temperatura= sensorBME280.readTemperature();
+    presionHPa= sensorBME280.readPressure()/100.0F*PRESSURE_CORRECTION;
     DPRINTLN("Data read");
     #ifdef CON_LLUVIA 
       //detachInterrupt(digitalPinToInterrupt(interruptPin));
@@ -245,19 +245,19 @@ boolean tomaDatos (){
     #endif
     if (humedadMin==humedadMax) humedadMax+=1; 
     /* if data could not be read for whatever reason, raise a message (in PRINT_SI mode) 
-      Else calculate the mean */
-    if (isnan(bufHumedad) || isnan(bufHumedad1) ||
-        isnan(bufPresion) || isnan(bufPresion1) ||
-        isnan(bufTemp)    || isnan(bufTemp1)    ) {       
+      **** Else calculate the mean */
+    if (isnan(bufHumedad) || isnan(humedadAire) ||
+        isnan(bufPresion) || isnan(presionHPa) ||
+        isnan(bufTemp)    || isnan(temperatura)    ) {       
        DPRINTLN("I could not read from BME280msensor!");       
        escorrecto=false;    // flag that BME280 could not read
     } else {
-      temperatura=(bufTemp+bufTemp1)/2;
-      humedadAire=(bufHumedad+bufHumedad1)/2;
-      presionHPa=(bufPresion+bufPresion1)/2*PRESSURE_CORRECTION;
+      temperatura=(bufTemp+temperatura)/2;
+      humedadAire=(bufHumedad+humedadAire)/2;
+      presionHPa=(bufPresion+presionHPa)/2*PRESSURE_CORRECTION;
       escorrecto=true;
-      if (temperatura>60) escorrecto=false;   //if temperature out of reasonable range
-      if ((humedadAire>101)||(humedadAire<0)) escorrecto=false;    // or humidity      
+      //if (temperatura>60) escorrecto=false;   //if temperature out of reasonable range
+      //if ((humedadAire>101)||(humedadAire<0)) escorrecto=false;    // or humidity      
     } 
     if (i++>30) {
       return false;
