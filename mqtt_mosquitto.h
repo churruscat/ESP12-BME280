@@ -7,6 +7,8 @@
 /*************************************************
  ** -------- Valores Personalizados ----------- **
  * ***********************************************/
+#define ESPERA_NOCONEX 30000  // When no conection, wait 30 sec
+char server[] = "192.168.1.11";
 #define DEVICE_TYPE "ESP12E-Riego"
 char* ssid;
 char* password;
@@ -22,8 +24,6 @@ char password2[] = "Password_ssid2";
 /*************************************************
  ** ----- Fin de Valores Personalizados ------- **
  * ***********************************************/
-#define ESPERA_NOCONEX 30000  // When no conection, wait 30 sec
-char server[] = "192.168.1.11";
 char * authMethod = NULL;
 char * token = NULL;
 char clientId[] = "d:" LOCATION":" DEVICE_TYPE ":" DEVICE_ID;
