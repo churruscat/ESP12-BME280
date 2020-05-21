@@ -21,10 +21,10 @@
  ** -------- Personalised values ----------- **
  * *****************************************/
 /* select sensor and its values */ 
-//#include "pruebas.h"  
+#include "pruebas.h"  
 //#include "salon.h"
 //#include "jardin.h"
-#include "terraza.h"
+//#include "terraza.h"
 #include "mqtt_mosquitto.h"  /* mqtt values */
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
@@ -45,8 +45,8 @@
 #include <Adafruit_BME280.h>
 #include <Pin_NodeMCU.h>
 #define PRESSURE_CORRECTION (1.080)  // HPAo/HPHh 647m
-
-#define BME280_ADDRESS   (0x76)   //IMPORTANT, sometimes it is 0x77
+#define ACTUAL_BME280_ADDRESS BME280_ADDRESS_ALTERNATE   // depends on sensor manufacturer
+//#define ACTUAL_BME280_ADDRESS BME280_ADDRESS   
 Adafruit_BME280 sensorBME280;     // this represents the sensor
 
 #define JSONBUFFSIZE 250
@@ -76,7 +76,7 @@ boolean status;
 
    DPRINTLN("starting ... "); 
    Wire.begin(SDA,SCL);
-   status = sensorBME280.begin();  
+   status = sensorBME280.begin(ACTUAL_BME280_ADDRESS);  
    if (!status) {
      DPRINTLN("Can't connect to BME Sensor!  ");    
    }
@@ -94,6 +94,14 @@ boolean status;
    digitalWrite(CONTROL_HUMEDAD, LOW);
    wifiConnect();
    mqttConnect();
+   sensorBME280.setSampling(Adafruit_BME280::MODE_NORMAL);
+   /*************************************************************
+   sensorBME280.setSampling(Adafruit_BME280::MODE_FORCED,  // también podemos poner MODE_NORMAL
+                    Adafruit_BME280::SAMPLING_X16, // temperature
+                    Adafruit_BME280::SAMPLING_X16, // pressure
+                    Adafruit_BME280::SAMPLING_X16, // humidity
+                    Adafruit_BME280::FILTER_X4   );
+    *************************************************************/
    DPRINTLN(" los dos connect hechos, ahora OTA");
    ArduinoOTA.setHostname(DEVICE_ID); 
    ArduinoOTA.onStart([]() {
@@ -176,25 +184,25 @@ boolean publicaDatos() {
       // prepare the message
       #ifdef CON_LLUVIA
         #ifdef CON_SUELO
-         sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"hSuelo\":%d,\"hCrudo\":%d,\"HPa\":%d,\"l/m2\":%d.%03d},{\"deviceId\":\"%s\"}]",
+         sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"hSuelo\":%d,\"hCrudo\":%d,\"HPa\":%d,\"l/m2\":%d.%03d},{\"deviceId\":\"%s\",\"location\":\"%s\"}]",
                  signo,(int)temperatura, (int)(temperatura * 10.0) % 10,
                  (int) humedadAire, (int) humedadSuelo,(int) humedadCrudo,(int) presionHPa,
-                 (int)lluvia, (int)(lluvia * 1000) % 1000,DEVICE_ID);
+                 (int)lluvia, (int)(lluvia * 1000) % 1000,DEVICE_ID,LOCATION);
         #else
-         sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"HPa\":%d,\"l/m2\":%d.%03d},{\"deviceId\":\"%s\"}]",
+         sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"HPa\":%d,\"l/m2\":%d.%03d},{\"deviceId\":\"%s\",\"location\":\"%s\"}]",        
                  signo,(int)temperatura, (int)(temperatura * 10.0) % 10,
                  (int) humedadAire,(int) presionHPa,
-                 (int)lluvia, (int)(lluvia * 1000) % 1000,DEVICE_ID);
+                 (int)lluvia, (int)(lluvia * 1000) % 1000,DEVICE_ID,LOCATION);
         #endif                  
       #else
           #ifdef CON_SUELO
-            sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"hSuelo\":%d,\"hCrudo\":%d,\"HPa\":%d},{\"deviceId\":\"%s\"}]",
+            sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"hSuelo\":%d,\"hCrudo\":%d,\"HPa\":%d},{\"deviceId\":\"%s\",\"location\":\"%s\"}]",            
                 signo,(int)temperatura, (int)(temperatura * 10.0) % 10,\
-                (int)humedadAire, (int) humedadSuelo,(int)humedadCrudo,(int)presionHPa,DEVICE_ID);  
+                (int)humedadAire, (int) humedadSuelo,(int)humedadCrudo,(int)presionHPa,DEVICE_ID,LOCATION);  
           #else      
-            sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"HPa\":%d},{\"deviceId\":\"%s\"}]",
+            sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"HPa\":%d},{\"deviceId\":\"%s\",\"location\":\"%s\"}]",            
                 signo,(int)temperatura, (int)(temperatura * 10.0) % 10,\
-                (int)humedadAire, (int)presionHPa,DEVICE_ID);  
+                (int)humedadAire, (int)presionHPa,DEVICE_ID,LOCATION);  
           #endif
       #endif     
   }
