@@ -21,10 +21,11 @@
  ** -------- Personalised values ----------- **
  * *****************************************/
 /* select sensor and its values */ 
-#include "pruebas.h"  
+
+//#include "pruebas.h"  
 //#include "salon.h"
 //#include "jardin.h"
-//#include "terraza.h"
+#include "terraza.h"
 #include "mqtt_mosquitto.h"  /* mqtt values */
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
@@ -43,7 +44,7 @@
 #include <Wire.h>             //libraries for sensors and so on
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
-#include <Pin_NodeMCU.h>
+#include "Pin_NodeMCU.h"
 #define PRESSURE_CORRECTION (1.080)  // HPAo/HPHh 647m
 #define ACTUAL_BME280_ADDRESS BME280_ADDRESS_ALTERNATE   // depends on sensor manufacturer
 //#define ACTUAL_BME280_ADDRESS BME280_ADDRESS   
@@ -167,8 +168,9 @@ boolean publicaDatos() {
   char signo;
   boolean pubresult=true;
      
-  if (!tomaDatos()) { 
-      sprintf(datosJson,"[{\"temp\":\"error\"},{\"deviceId\":\"%s\"}]",DEVICE_ID);
+  if (!tomaDatos()) {
+      sprintf(datosJson,"[{\"temp\":\"NaN\"},{\"deviceId\":\"%s\",\"location\":\"%s\"}]",
+            DEVICE_ID,LOCATION);
     } else {
       // Data is read an stored in global var. Prepare data in JSON mode
       if (temperatura<0) {  // to avoid problems with sign
@@ -216,55 +218,35 @@ boolean tomaDatos (){
   boolean escorrecto=false;  //return value will be false unless it works
   int i=0;
   /* read and then get the mean */
-  DPRINTLN("entro en tomadatos");
-  while (!escorrecto) {
-    bufHumedad= sensorBME280.readHumidity();   
-    bufTemp= sensorBME280.readTemperature();
-    bufPresion=sensorBME280.readPressure()/100.0F;
-    #ifdef CON_SUELO
-      /* activate soil sensor setting the transistor base */
-      digitalWrite(CONTROL_HUMEDAD, HIGH);
-      espera(10000);  
-      humedadCrudo = analogRead(sensorPin); // and read soil moisture
-      humedadCrudo=constrain(humedadCrudo,humedadMin,humedadMax); 
-      digitalWrite(CONTROL_HUMEDAD, LOW);  // disconnect soil sensor
-      // calculate the moving average of soil humidity of last three values 
-      humedadCrudo=(humedadCrudo1+humedadCrudo2+humedadCrudo)/3;
-      humedadSuelo = map(humedadCrudo,humedadMin,humedadMax,0,100);
-      humedadCrudo2=humedadCrudo1;
-      humedadCrudo1=humedadCrudo;
-    #endif
-    // read again from BME280 sensor
-    humedadAire= sensorBME280.readHumidity();
-    temperatura= sensorBME280.readTemperature();
-    presionHPa= sensorBME280.readPressure()/100.0F*PRESSURE_CORRECTION;
-    DPRINTLN("Data read");
-    #ifdef CON_LLUVIA 
-      //detachInterrupt(digitalPinToInterrupt(interruptPin));
-      lluvia+=contadorPluvi*L_POR_BALANCEO;
-      contadorPluvi=0;
-      //attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, RISING);
-    #endif
-    if (humedadMin==humedadMax) humedadMax+=1; 
-    /* if data could not be read for whatever reason, raise a message (in PRINT_SI mode) 
-      **** Else calculate the mean */
-    if (isnan(bufHumedad) || isnan(humedadAire) ||
-        isnan(bufPresion) || isnan(presionHPa) ||
-        isnan(bufTemp)    || isnan(temperatura)    ) {       
-       DPRINTLN("I could not read from BME280msensor!");       
-       escorrecto=false;    // flag that BME280 could not read
-    } else {
-      temperatura=(bufTemp+temperatura)/2;
-      humedadAire=(bufHumedad+humedadAire)/2;
-      presionHPa=(bufPresion+presionHPa)/2*PRESSURE_CORRECTION;
-      escorrecto=true;
-      //if (temperatura>60) escorrecto=false;   //if temperature out of reasonable range
-      //if ((humedadAire>101)||(humedadAire<0)) escorrecto=false;    // or humidity      
-    } 
-    if (i++>30) {
-      return false;
-    }  
-    espera(1000);
+  DPRINTLN("begin tomadatos");
+  #ifdef CON_SUELO
+    /* activate soil sensor setting the transistor base */
+    digitalWrite(CONTROL_HUMEDAD, HIGH);
+    espera(1000);  
+    humedadCrudo = analogRead(sensorPin); // and read soil moisture
+    humedadCrudo=constrain(humedadCrudo,humedadMin,humedadMax); 
+    digitalWrite(CONTROL_HUMEDAD, LOW);  // disconnect soil sensor
+    // calculate the moving average of soil humidity of last three values 
+    humedadCrudo=(humedadCrudo1+humedadCrudo2+humedadCrudo)/3;
+    humedadSuelo = map(humedadCrudo,humedadMin,humedadMax,0,100);
+    humedadCrudo2=humedadCrudo1;
+    humedadCrudo1=humedadCrudo;
+  #endif
+  // read from BME280 sensor
+  humedadAire= sensorBME280.readHumidity();
+  temperatura= sensorBME280.readTemperature();
+  presionHPa= sensorBME280.readPressure();
+  if (!isnan(presionHPa)){
+      presionHPa=presionHPa/100.0F*PRESSURE_CORRECTION;
   }
+  #ifdef CON_LLUVIA 
+    //detachInterrupt(digitalPinToInterrupt(interruptPin));
+    lluvia+=contadorPluvi*L_POR_BALANCEO;
+    contadorPluvi=0;
+    //attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, RISING);
+  #endif
+  if (humedadMin==humedadMax) humedadMax+=1;
+  if (humedadAire==0 && temperatura==0 && presionHPa==0) escorrecto=false;
+  else escorrecto=true;
   return escorrecto;
 }
