@@ -17,6 +17,7 @@ int i=0,j=0;
   WiFi.persistent(false); 
   WiFi.mode(WIFI_OFF);
   delay(1000);
+  WiFi.setPhyMode(WIFI_PHY_MODE_11B);  
   WiFi.mode(WIFI_STA);  //The 8266 is a station, not an AP 
   delay(1000);
   WiFi.begin(ssid,password);
@@ -41,6 +42,7 @@ int i=0,j=0;
       DPRINT("I will try to connect to "); DPRINTLN(ssid);
       WiFi.mode(WIFI_OFF);
       delay(1000);
+      WiFi.setPhyMode(WIFI_PHY_MODE_11B);  // gives more stability
       WiFi.mode(WIFI_STA);  //The 8266 is a station, not an AP 
       espera(1000);
       WiFi.begin(ssid,password);      
@@ -60,8 +62,8 @@ int j=0;
   clienteMQTT.disconnect(); 
   espera(500);
   while(!wifiConnect()) {   
-    DPRINT("Sin conectividad, espero secs  ");DPRINTLN(int(intervaloConex/2000));
-    espera(ESPERA_NOCONEX);
+    DPRINT("No connectivity, wait secs  ");DPRINTLN(int(intervaloConex/1000));
+    espera(intervaloConex);
   }
 }
 
@@ -110,7 +112,7 @@ void initManagedDevice() {
 }
 
 void funcallback(char* topic, byte* payload, unsigned int payloadLength) {
- DPRINT("funcallback invocado para el topic: "); DPRINTLN(topic);
+ DPRINT("funcallback invoked for topic: "); DPRINTLN(topic);
  if (strcmp (updateTopic, topic) == 0) {
    handleUpdate(payload);  
  }
@@ -120,7 +122,7 @@ void funcallback(char* topic, byte* payload, unsigned int payloadLength) {
  } 
  else if (strcmp (rebootTopic, topic) == 0) {
    DPRINTLN("Rearrancando...");    
-   ESP.restart(); // da problemas, no siempre rearranca
+   ESP.restart(); // this has issues, sometimes hangs
    //ESP.reset();
  }
 }
@@ -135,7 +137,7 @@ void handleUpdate(byte* payload) {
 
 /********** Send data to broker **************/
 
-boolean enviaDatos(char * topic, char * datosJSON) {
+boolean enviaDatos(char * topic, char * datos_) {
   int k=0;
   boolean pubresult=false;  
   
@@ -145,7 +147,7 @@ boolean enviaDatos(char * topic, char * datosJSON) {
     initManagedDevice();
     k++; 
   }
-  pubresult = clienteMQTT.publish(topic,datosJSON);
+  pubresult = clienteMQTT.publish(topic,datos_);
   DPRINT("Sending ");DPRINT(datosJson);
   DPRINT("to ");DPRINTLN(publishTopic);
   if (pubresult) 
