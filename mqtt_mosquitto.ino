@@ -17,9 +17,12 @@ int i=0,j=0;
   WiFi.persistent(false); 
   WiFi.mode(WIFI_OFF);
   delay(1000);
-  WiFi.setPhyMode(WIFI_PHY_MODE_11B);  
+  //WiFi.setPhyMode(WIFI_PHY_MODE_11B);  
   WiFi.mode(WIFI_STA);  //The 8266 is a station, not an AP 
-  delay(1000);
+  #ifdef IP_FIJA
+    WiFi.config(ip, gateway, subnet);
+  #endif
+  delay(1000); 
   WiFi.begin(ssid,password);
 
   while ((WiFi.status() != WL_CONNECTED )) {
@@ -42,8 +45,11 @@ int i=0,j=0;
       DPRINT("I will try to connect to "); DPRINTLN(ssid);
       WiFi.mode(WIFI_OFF);
       delay(1000);
-      WiFi.setPhyMode(WIFI_PHY_MODE_11B);  // gives more stability
+      // WiFi.setPhyMode(WIFI_PHY_MODE_11B);  // gives more stability
       WiFi.mode(WIFI_STA);  //The 8266 is a station, not an AP 
+      #ifdef IP_FIJA
+        WiFi.config(ip, gateway, subnet);
+      #endif      
       espera(1000);
       WiFi.begin(ssid,password);      
     }
@@ -163,6 +169,7 @@ void espera(unsigned long tEspera) {
   
   while ((millis()-principio)<tEspera) {
     yield();
-    delay(50);
+    ArduinoOTA.handle();
+    delay(100);
   }
 }
