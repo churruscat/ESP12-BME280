@@ -24,15 +24,14 @@
  * *****************************************/
 /* select sensor and its values */ 
 
-#include "pruebas.h"  
+//#include "pruebas.h"  
 //#include "salon.h"
 //#include "jardin.h"
-//#include "terraza.h"
+#include "terraza.h"
 #include "mqtt_mosquitto.h"  /* mqtt values */
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
-#include <ArduinoJson.h>
 #define PRESSURE_CORRECTION (1.080)  // HPAo/HPHh 647m
 #define ACTUAL_BME280_ADDRESS BME280_ADDRESS_ALTERNATE   // depends on sensor manufacturer
 //#define ACTUAL_BME280_ADDRESS BME280_ADDRESS   
@@ -43,7 +42,6 @@
 #define SDA D5   // for BME280 I2C 
 #define SCL D6
 #define interruptPin D7 // PIN where I'll connect the rain gauge
-#define PIN_UV D8
 #define sensorPin    A0  // analog PIN  of Soil humidity sensor
 #define CONTROL_HUMEDAD D2  // Transistor base that switches on&off soil sensor
 #define L_POR_BALANCEO 0.2794 // liter/m2 for evey rain gauge interrupt
@@ -65,23 +63,13 @@ int humedadMin=HUMEDAD_MIN,
 		humedadSuelo=0,humedadCrudo=HUMEDAD_MIN;
 int humedadCrudo1,humedadCrudo2,
 		intervaloConex=INTERVALO_CONEX;
-#define JSONBUFFSIZE 250
-#define DATOSJSONSIZE 250   
 char datosJson[DATOS_SIZE];
-StaticJsonDocument<DATOSJSONSIZE> docJson;
-JsonObject valores=docJson.createNestedObject();  //Read values
-JsonObject claves=docJson.createNestedObject();   // key values (location and deviceId)
 #ifdef CON_LLUVIA
 	// Interrupt counter for rain gauge
 	void ICACHE_RAM_ATTR balanceoPluviometro() {  
 	contadorPluvi++;
 }
 #endif
-#ifdef CON_UV
-  int lecturaUV;
-  float UV_Watt;
-  int   UV_Index;  
-#endif  
 
 // let's start, setup variables
 void setup() {
@@ -109,11 +97,7 @@ boolean status;
 	wifiConnect();
 	mqttConnect();
 	sensorBME280.setSampling(Adafruit_BME280::MODE_NORMAL);
-  #ifdef CON_UV
-    pinMode(PIN_UV, INPUT);
-    //analogReadResolution(12);
-    //analogSetPinAttenuation(PIN_UV,ADC_11db) ;    
-  #endif
+
 	DPRINTLN(" los dos connect hechos, ahora OTA");
 	ArduinoOTA.setHostname(DEVICE_ID); 
 	ArduinoOTA.onStart([]() {
@@ -187,7 +171,35 @@ boolean publicaDatos() {
 			sprintf(datosJson,"[{\"temp\":\"NaN\"},{\"deviceId\":\"%s\",\"location\":\"%s\"}]",
 						DEVICE_ID,LOCATION);
 		} else {
-  			      serializeJson(docJson,datosJson);
+			// Data is read an stored in global var. Prepare data in _ mode
+			if (temperatura<0) {  // to avoid problems with sign
+				signo='-';          // if negative , set '-' character
+				temperatura*=-1;  // if temp was negative, convert it positive 
+			}  else signo=' ';
+			// prepare the message
+			#ifdef CON_LLUVIA
+				#ifdef CON_SUELO
+				 sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"hSuelo\":%d,\"hCrudo\":%d,\"HPa\":%d,\"l/m2\":%d.%03d},{\"deviceId\":\"%s\",\"location\":\"%s\"}]",
+								 signo,(int)temperatura, (int)(temperatura * 10.0) % 10,
+								 (int) humedadAire, (int) humedadSuelo,(int) humedadCrudo,(int) presionHPa,
+								 (int)lluvia, (int)(lluvia * 1000) % 1000,DEVICE_ID,LOCATION);
+				#else
+				 sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"HPa\":%d,\"l/m2\":%d.%03d},{\"deviceId\":\"%s\",\"location\":\"%s\"}]",        
+								 signo,(int)temperatura, (int)(temperatura * 10.0) % 10,
+								 (int) humedadAire,(int) presionHPa,
+								 (int)lluvia, (int)(lluvia * 1000) % 1000,DEVICE_ID,LOCATION);
+				#endif                  
+			#else
+					#ifdef CON_SUELO
+						sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"hSuelo\":%d,\"hCrudo\":%d,\"HPa\":%d},{\"deviceId\":\"%s\",\"location\":\"%s\"}]",            
+								signo,(int)temperatura, (int)(temperatura * 10.0) % 10,\
+								(int)humedadAire, (int) humedadSuelo,(int)humedadCrudo,(int)presionHPa,DEVICE_ID,LOCATION);  
+					#else      
+						sprintf(datosJson,"[{\"temp\":%c%d.%1d,\"hAire\":%d,\"HPa\":%d},{\"deviceId\":\"%s\",\"location\":\"%s\"}]",            
+								signo,(int)temperatura, (int)(temperatura * 10.0) % 10,\
+								(int)humedadAire, (int)presionHPa,DEVICE_ID,LOCATION);  
+					#endif
+			#endif     
 	}
 	// and publish them.
 	DPRINTLN("preparing to send");
@@ -217,8 +229,6 @@ boolean tomaDatos (){
 		humedadSuelo = map(humedadCrudo,humedadMin,humedadMax,0,100);
 		humedadCrudo2=humedadCrudo1;
 		humedadCrudo1=humedadCrudo;
-    valores["hCrudo"]=humedadCrudo;
-    valores["hSuelo"]=humedadsuelo;    
 	#endif
 	// read from BME280 sensor
 	humedadAire= sensorBME280.readHumidity();
@@ -231,28 +241,10 @@ boolean tomaDatos (){
 		//detachInterrupt(digitalPinToInterrupt(interruptPin));
 		lluvia+=contadorPluvi*L_POR_BALANCEO;
 		contadorPluvi=0;
-    valores["l/m2"]=lluvia;
 		//attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, RISING);
 	#endif
-      #ifdef CON_UV
-      lecturaUV = analogRead(PIN_UV);
-      UV_Watt=10/1.2*(3.3*lecturaUV/1023-1);  // mWatt/cm^2, at 2.2 V read there are 10mw/cm2
-      UV_Index=(int) UV_Watt;
-      DPRINT(" analog ");     DPRINTLN(lecturaUV);
-      DPRINT("/t UV Watt  ");DPRINTLN(UV_Watt);
-      DPRINT("/t UV index  ");DPRINTLN(UV_Index);
-      valores["indexUV"]=UV_Watt;
-    #endif
 	if (humedadMin==humedadMax) humedadMax+=1;
-	if (humedadAire==0 && temperatura==0 && presionHPa==0){ 
-	   escorrecto=false;
-     DPRINTLN("todo es cero");
-	}
-	else {
-      valores["temp"]=temperatura;      
-      valores["HPa"]=presionHPa;      
-      valores["hAire"]=humedadAire;
-	}
-	escorrecto=true;
+	if (humedadAire==0 && temperatura==0 && presionHPa==0) escorrecto=false;
+	else escorrecto=true;
 	return escorrecto;
 }
