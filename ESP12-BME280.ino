@@ -24,18 +24,18 @@
  * *****************************************/
 /* select sensor and its values */ 
 
-#include "pruebas.h"  
+//#include "pruebas.h"  
 //#include "salon.h"
 //#include "jardin.h"
-//#include "terraza.h"
+#include "terraza.h"
 #include "mqtt_mosquitto.h"  /* mqtt values */
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
 #define PRESSURE_CORRECTION (1.080)  // HPAo/HPHh 647m
-#define ACTUAL_BME280_ADDRESS BME280_ADDRESS_ALTERNATE   // depends on sensor manufacturer
-//#define ACTUAL_BME280_ADDRESS BME280_ADDRESS   
+#define ACTUAL_BME280_ADDRESS BME280_ADDRESS_ALTERNATE   // (0x76)depends on sensor manufacturer
+//#define ACTUAL_BME280_ADDRESS BME280_ADDRESS           // (0x77)
 /*************************************************
  ** ----- End of Personalised values ------- **
  * ***********************************************/
@@ -131,13 +131,13 @@ boolean status;
 		DPRINTLN("\nEnd");
 	});
 	ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    DPRINTF("Progress: %u%%\r\n", (progress / (total / 100)));
+    DPRINTF("Progress: %u%%\r\n",(progress / (total / 100)));
 	});
 	ArduinoOTA.onError([](ota_error_t error) {
 			DPRINTF("Error[%u]: ", error);
 		if (error == OTA_AUTH_ERROR) {
 			DPRINTLN("Auth Failed");
-		} else if (error == OTA_BEGIN_ERROR) {
+    } else if (error == OTA_BEGIN_ERROR) { 
 			DPRINTLN("Begin Failed");
 		} else if (error == OTA_CONNECT_ERROR) {
 			DPRINTLN("Connect Failed");
@@ -148,6 +148,8 @@ boolean status;
 		}
 	});
 	ArduinoOTA.begin(); 
+  claves["deviceId"]=DEVICE_ID;
+  claves["location"]=LOCATION;
 	delay(50);
 	publicaDatos();      // and publish data. This is the function that gets and sends
 }
@@ -250,8 +252,8 @@ boolean tomaDatos (){
 	}
 	else {
       valores["temp"]=temperatura;      
-      valores["HPa"]=presionHPa;      
-      valores["hAire"]=humedadAire;
+      valores["HPa"]=(int)presionHPa;      
+      valores["hAire"]=(int)humedadAire;
 	}
 	escorrecto=true;
 	return escorrecto;
