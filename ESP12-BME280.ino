@@ -98,7 +98,7 @@ boolean status;
 	pinMode(CONTROL_HUMEDAD,OUTPUT);
 	#ifdef CON_LLUVIA
 		pinMode(interruptPin, INPUT_PULLUP);
-		attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, RISING);
+		attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, CHANGE);
 	#endif
 	digitalWrite(CONTROL_HUMEDAD, HIGH); // prepare to read soil humidity sensor
 	espera(1000);
@@ -189,13 +189,14 @@ boolean publicaDatos() {
 			sprintf(datosJson,"[{\"temp\":\"NaN\"},{\"deviceId\":\"%s\",\"location\":\"%s\"}]",
 						DEVICE_ID,LOCATION);
 		} else {
-  			      serializeJson(docJson,datosJson);
+      //if (lluvia==0) valores["l/m2"]=serialized(String(0.0,1));
+  	  serializeJson(docJson,datosJson);
 	}
 	// and publish them.
 	DPRINTLN("preparing to send");
 	pubresult = enviaDatos(publishTopic,datosJson);    
 	if (pubresult){
-		lluvia=0;      // I sent data was successful, set rain to zero 
+		lluvia=0.0;      // I sent data was successful, set rain to zero 
 	}
 	return pubresult;
 }
@@ -231,10 +232,10 @@ boolean tomaDatos (){
 	}
 	#ifdef CON_LLUVIA 
 		//detachInterrupt(digitalPinToInterrupt(interruptPin));
-		lluvia+=contadorPluvi*L_POR_BALANCEO;
+		lluvia+=contadorPluvi*L_POR_BALANCEO/2;  // porque cuento CHANGE
 		contadorPluvi=0;
-    valores["l/m2"]=lluvia;
-		//attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, RISING);
+    valores["l/m2"]=serialized(String(lluvia,3));
+		//attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, CHANGE);
 	#endif
       #ifdef CON_UV
       lecturaUV = analogRead(PIN_UV);
@@ -251,7 +252,7 @@ boolean tomaDatos (){
      DPRINTLN("todo es cero");
 	}
 	else {
-      valores["temp"]=temperatura;      
+      valores["temp"]=serialized(String(temperatura,2));      
       valores["HPa"]=(int)presionHPa;      
       valores["hAire"]=(int)humedadAire;
 	}
