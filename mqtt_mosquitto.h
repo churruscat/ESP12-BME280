@@ -1,11 +1,12 @@
 #include <ESP8266WiFi.h>
 #define MQTT_MAX_PACKET_SIZE 455 //must be before docpatth\Arduino\libraries\pubsubclient-master\src\pubsubclient.h
+//setBufferSize(455); introduced in version 2.8
 #define MQTT_KEEP_ALIVE 60
 #include <PubSubClient.h> // https://github.com/knolleary/pubsubclient
 #include "Pin_NodeMCU.h"
 
 /*************************************************
- ** -------- Valores Personalizados ----------- **
+ ** ---------- Personalized Values ------------- **
  * ***********************************************/
 #define ESPERA_NOCONEX 30000  // When no conection, wait 30 sec
 char server[] = "192.168.1.11";

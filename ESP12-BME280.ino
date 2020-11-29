@@ -34,7 +34,7 @@
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
 #define PRESSURE_CORRECTION (1.080)  // HPAo/HPHh 647m
-#define ACTUAL_BME280_ADDRESS BME280_ADDRESS_ALTERNATE   // (0x76)depends on sensor manufacturer
+#define ACTUAL_BME280_ADDRESS BME280_ADDRESS_ALTERNATE   // (0x77)depends on sensor manufacturer
 //#define ACTUAL_BME280_ADDRESS BME280_ADDRESS           // (0x77)
 /*************************************************
  ** ----- End of Personalised values ------- **
@@ -59,7 +59,7 @@ Adafruit_BME280 sensorBME280;     // this represents the sensor
 
 volatile int contadorPluvi = 0; // must be 'volatile',for counting interrupt 
 /* ********* these are the sensor variables that will be exposed **********/ 
-float temperatura,humedadAire,presionHPa,lluvia=0,sensacion=20;
+float lluvia=0;
 int humedadMin=HUMEDAD_MIN,
 		humedadMax=HUMEDAD_MAX, 
 		humedadSuelo=0,humedadCrudo=HUMEDAD_MIN;
@@ -75,7 +75,7 @@ JsonObject claves=docJson.createNestedObject();   // key values (location and de
 	// Interrupt counter for rain gauge
 	void ICACHE_RAM_ATTR balanceoPluviometro() {  
 	contadorPluvi++;
-}
+  }
 #endif
 #ifdef CON_UV
   int lecturaUV;
@@ -98,7 +98,7 @@ boolean status;
 	pinMode(CONTROL_HUMEDAD,OUTPUT);
 	#ifdef CON_LLUVIA
 		pinMode(interruptPin, INPUT_PULLUP);
-		attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, CHANGE);
+		attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, FALLING);
 	#endif
 	digitalWrite(CONTROL_HUMEDAD, HIGH); // prepare to read soil humidity sensor
 	espera(1000);
@@ -123,7 +123,6 @@ boolean status;
 		} else { // U_FS
 			type = "filesystem";
 		}
-
 		// NOTE: if updating FS this would be the place to unmount FS using FS.end()
 		DPRINTLN("Start updating " + type);
 	});
@@ -186,17 +185,19 @@ boolean publicaDatos() {
 	boolean pubresult=true;
 		 
 	if (!tomaDatos()) {
-			sprintf(datosJson,"[{\"temp\":\"NaN\"},{\"deviceId\":\"%s\",\"location\":\"%s\"}]",
-						DEVICE_ID,LOCATION);
+			valores.remove("temp");      
+      valores.remove("HPa");  
+      valores.remove("hAire");
+      serializeJson(docJson,datosJson);
 		} else {
-      //if (lluvia==0) valores["l/m2"]=serialized(String(0.0,1));
   	  serializeJson(docJson,datosJson);
 	}
 	// and publish them.
 	DPRINTLN("preparing to send");
-	pubresult = enviaDatos(publishTopic,datosJson);    
+	pubresult = enviaDatos(publishTopic,datosJson); 
+  if (!tomaDatos) ESP.restart();    
 	if (pubresult){
-		lluvia=0.0;      // I sent data was successful, set rain to zero 
+		lluvia=0.0;      // data sent successfully, set rain to zero 
 	}
 	return pubresult;
 }
@@ -205,6 +206,7 @@ boolean publicaDatos() {
 /* get data function. Read the sensors and set values in global variables */
 boolean tomaDatos (){
 	boolean escorrecto=false;  //return value will be false unless it works
+  float temperatura,humedadAire,presionHPa;
 	int i=0;
 	/* read and then get the mean */
 	DPRINTLN("begin tomadatos");
@@ -221,7 +223,7 @@ boolean tomaDatos (){
 		humedadCrudo2=humedadCrudo1;
 		humedadCrudo1=humedadCrudo;
     valores["hCrudo"]=humedadCrudo;
-    valores["hSuelo"]=humedadsuelo;    
+    valores["hSuelo"]=humedadSuelo;    
 	#endif
 	// read from BME280 sensor
 	humedadAire= sensorBME280.readHumidity();
@@ -231,11 +233,12 @@ boolean tomaDatos (){
 			presionHPa=presionHPa/100.0F*PRESSURE_CORRECTION;
 	}
 	#ifdef CON_LLUVIA 
-		//detachInterrupt(digitalPinToInterrupt(interruptPin));
-		lluvia+=contadorPluvi*L_POR_BALANCEO/2;  // porque cuento CHANGE
-		contadorPluvi=0;
-    valores["l/m2"]=serialized(String(lluvia,3));
-		//attachInterrupt(digitalPinToInterrupt(interruptPin), balanceoPluviometro, CHANGE);
+		lluvia+=contadorPluvi*L_POR_BALANCEO;  
+    if (lluvia==0) 
+        valores["l/m2"]=serialized(String(0.0));
+    else
+       valores["l/m2"]=lluvia;     
+    contadorPluvi=0;   
 	#endif
       #ifdef CON_UV
       lecturaUV = analogRead(PIN_UV);
@@ -247,14 +250,17 @@ boolean tomaDatos (){
       valores["indexUV"]=UV_Watt;
     #endif
 	if (humedadMin==humedadMax) humedadMax+=1;
-	if (humedadAire==0 && temperatura==0 && presionHPa==0){ 
-	   escorrecto=false;
-     DPRINTLN("todo es cero");
-	}
-	else {
-      valores["temp"]=serialized(String(temperatura,2));      
-      valores["HPa"]=(int)presionHPa;      
-      valores["hAire"]=(int)humedadAire;
+	if (temperatura==0 && presionHPa==0){ 
+	   escorrecto=false;  // read not correct
+     DPRINTLN("all values are zero");
+	}	else {
+    valores["hAire"]=(int)humedadAire;
+    valores["HPa"]=(int)presionHPa;
+    valores["temp"]=temperatura+0.001;
+    if (humedadAire>200 || humedadAire==0 || isnan(humedadAire))
+        valores.remove("hAire");   // y values are out of range, donn't send them
+    if (temperatura > 90 || temperatura <-50|| isnan(temperatura))
+        valores.remove("temp");
 	}
 	escorrecto=true;
 	return escorrecto;
