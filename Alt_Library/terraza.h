@@ -1,7 +1,6 @@
 #define LOCATION "Pozuelo"
 #define DEVICE_ID "Terraza"
 #define TOKEN "Token-dela-Terraza"
-#define CON_BME280
 #undef IP_FIJA
 #ifdef IP_FIJA
   byte ip[] = {192,168,1,32};   

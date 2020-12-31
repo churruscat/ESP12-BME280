@@ -24,16 +24,17 @@
  * *****************************************/
 /* select sensor and its values */ 
 
-//#include "pruebas.h"  
+#include "pruebas.h"  
 //#include "salon.h"
 //#include "jardin.h"
-#include "terraza.h"
+//#include "terraza.h"
 #include "mqtt_mosquitto.h"  /* mqtt values */
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
-#define ACTUAL_BME280_ADDRESS BME280_ADDRESS_ALTERNATE   // (0x77)depends on sensor manufacturer
+
+#define ACTUAL_BME280_ADDRESS 0x76  // (0x77)depends on sensor manufacturer
 //#define ACTUAL_BME280_ADDRESS BME280_ADDRESS           // (0x77)
 /*************************************************
  ** ----- End of Personalised values ------- **
@@ -48,10 +49,10 @@
 #define L_POR_BALANCEO 0.2794 // liter/m2 for evey rain gauge interrupt
 #include <Wire.h>             //libraries for sensors and so on
 #include <Adafruit_Sensor.h>
-#include <Adafruit_BME280.h>
+#include <Adafruit_BMP280.h>
 #include "Pin_NodeMCU.h"
 
-Adafruit_BME280 sensorBME280;     // this represents the sensor
+Adafruit_BMP280 sensorBME280;     // this represents the sensor
 
 #define _BUFFSIZE 250
 #define DATOS_SIZE 250
@@ -113,7 +114,7 @@ boolean status;
   #endif
 	wifiConnect();
 	mqttConnect();
-	sensorBME280.setSampling(Adafruit_BME280::MODE_NORMAL);
+	sensorBME280.setSampling(Adafruit_BMP280::MODE_NORMAL);
   #ifdef CON_UV
     pinMode(PIN_UV, INPUT);
     //analogReadResolution(12);
@@ -206,11 +207,11 @@ boolean publicaDatos() {
       valores["temp"]=0;      
       valores["HPa"]=0;  
       valores["hAire"]=0;    
-	  valores.remove("temp");      
+			valores.remove("temp");      
       valores.remove("HPa");  
       valores.remove("hAire");
       serializeJson(docJson,datosJson);
-	} else {
+		} else {
   	  serializeJson(docJson,datosJson);
 	}
 	// and publish them.
@@ -227,7 +228,7 @@ boolean publicaDatos() {
 /* get data function. Read the sensors and set values in global variables */
 boolean tomaDatos (){
 	boolean escorrecto=false;  //return value will be false unless it works
-  float temperatura,humedadAire,presionHPa;
+  float temperatura,humedadAire=0,presionHPa;
 	int i=0;
 	/* read and then get the mean */
 	DPRINTLN("begin tomadatos");
@@ -243,11 +244,11 @@ boolean tomaDatos (){
 		humedadSuelo = map(humedadCrudo,humedadMin,humedadMax,0,100);
 		humedadCrudo2=humedadCrudo1;
 		humedadCrudo1=humedadCrudo;
-        valores["hCrudo"]=humedadCrudo;
-        valores["hSuelo"]=humedadSuelo;    
+    valores["hCrudo"]=humedadCrudo;
+    valores["hSuelo"]=humedadSuelo;    
 	#endif
 	// read from BME280 sensor
-	humedadAire= sensorBME280.readHumidity();
+	//humedadAire= sensorBME280.readHumidity();
 	temperatura= sensorBME280.readTemperature();
 	presionHPa= sensorBME280.readPressure();
 	if (!isnan(presionHPa)){

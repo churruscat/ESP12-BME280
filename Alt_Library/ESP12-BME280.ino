@@ -24,16 +24,18 @@
  * *****************************************/
 /* select sensor and its values */ 
 
-//#include "pruebas.h"  
+#include "pruebas.h"  
 //#include "salon.h"
 //#include "jardin.h"
-#include "terraza.h"
+//#include "terraza.h"
 #include "mqtt_mosquitto.h"  /* mqtt values */
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
-#define ACTUAL_BME280_ADDRESS BME280_ADDRESS_ALTERNATE   // (0x77)depends on sensor manufacturer
+
+//****#define ACTUAL_BME280_ADDRESS BME280_ADDRESS_ALTERNATE   // (0x76)depends on sensor manufacturer
+#define ACTUAL_BME280_ADDRESS 0x76
 //#define ACTUAL_BME280_ADDRESS BME280_ADDRESS           // (0x77)
 /*************************************************
  ** ----- End of Personalised values ------- **
@@ -47,11 +49,13 @@
 #define CONTROL_HUMEDAD D2  // Transistor base that switches on&off soil sensor
 #define L_POR_BALANCEO 0.2794 // liter/m2 for evey rain gauge interrupt
 #include <Wire.h>             //libraries for sensors and so on
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BME280.h>
+//***#include <Adafruit_Sensor.h>
+//***#include <Adafruit_BME280.h>
+#include <BMx280I2C.h>
 #include "Pin_NodeMCU.h"
 
-Adafruit_BME280 sensorBME280;     // this represents the sensor
+//***Adafruit_BME280 sensorBME280;     // this represents the sensor
+BMx280I2C sensorBME280(ACTUAL_BME280_ADDRESS);
 
 #define _BUFFSIZE 250
 #define DATOS_SIZE 250
@@ -93,10 +97,22 @@ boolean status;
 	Serial.begin(115200);
 	DPRINTLN("starting ... "); 
 	Wire.begin(SDA,SCL);
-	status = sensorBME280.begin(ACTUAL_BME280_ADDRESS);  
+	//***status = sensorBME280.begin(ACTUAL_BME280_ADDRESS);  
+  status = sensorBME280.begin();
 	if (!status) {
 		DPRINTLN("Can't connect to BME Sensor!  ");    
 	}
+  sensorBME280.resetToDefaults();
+
+  //by default sensing is disabled and must be enabled by setting a non-zero
+  //oversampling setting.
+  //set an oversampling setting for pressure and temperature measurements. 
+  sensorBME280.writeOversamplingPressure(BMx280MI::OSRS_P_x16);
+  sensorBME280.writeOversamplingTemperature(BMx280MI::OSRS_T_x16);
+
+  //if sensor is a BME280, set an oversampling setting for humidity measurements.
+  if (sensorBME280.isBME280())
+    sensorBME280.writeOversamplingHumidity(BMx280MI::OSRS_H_x16);
 	/* start PINs first soil Humidity, then Pluviometer */
 	#ifdef CON_LLUVIA
 		pinMode(interruptPin, INPUT_PULLUP);
@@ -113,7 +129,7 @@ boolean status;
   #endif
 	wifiConnect();
 	mqttConnect();
-	sensorBME280.setSampling(Adafruit_BME280::MODE_NORMAL);
+	//***sensorBME280.setSampling(Adafruit_BME280::MODE_NORMAL);
   #ifdef CON_UV
     pinMode(PIN_UV, INPUT);
     //analogReadResolution(12);
@@ -206,11 +222,11 @@ boolean publicaDatos() {
       valores["temp"]=0;      
       valores["HPa"]=0;  
       valores["hAire"]=0;    
-	  valores.remove("temp");      
+			valores.remove("temp");      
       valores.remove("HPa");  
       valores.remove("hAire");
       serializeJson(docJson,datosJson);
-	} else {
+		} else {
   	  serializeJson(docJson,datosJson);
 	}
 	// and publish them.
@@ -227,7 +243,7 @@ boolean publicaDatos() {
 /* get data function. Read the sensors and set values in global variables */
 boolean tomaDatos (){
 	boolean escorrecto=false;  //return value will be false unless it works
-  float temperatura,humedadAire,presionHPa;
+  float temperatura,humedadAire=0,presionHPa;
 	int i=0;
 	/* read and then get the mean */
 	DPRINTLN("begin tomadatos");
@@ -243,16 +259,20 @@ boolean tomaDatos (){
 		humedadSuelo = map(humedadCrudo,humedadMin,humedadMax,0,100);
 		humedadCrudo2=humedadCrudo1;
 		humedadCrudo1=humedadCrudo;
-        valores["hCrudo"]=humedadCrudo;
-        valores["hSuelo"]=humedadSuelo;    
+    valores["hCrudo"]=humedadCrudo;
+    valores["hSuelo"]=humedadSuelo;    
 	#endif
 	// read from BME280 sensor
-	humedadAire= sensorBME280.readHumidity();
-	temperatura= sensorBME280.readTemperature();
-	presionHPa= sensorBME280.readPressure();
+  if (sensorBME280.isBME280()){
+     humedadAire= sensorBME280.getHumidity();
+  }
+  DPRINTLN("humedadAire");
+	temperatura= sensorBME280.getTemperature();
+	presionHPa= sensorBME280.getPressure();
 	if (!isnan(presionHPa)){
 			presionHPa=presionHPa/100.0F*PRESSURE_CORRECTION;
 	}
+  DPRINT("temp= ");DPRINTLN(temperatura);
 	#ifdef CON_LLUVIA 
 		lluvia+=contadorPluvi*L_POR_BALANCEO;  
     if (lluvia==0) 
@@ -265,9 +285,9 @@ boolean tomaDatos (){
       lecturaUV = analogRead(PIN_UV);
       UV_Watt=10/1.2*(3.3*lecturaUV/1023-1);  // mWatt/cm^2, at 2.2 V read there are 10mw/cm2
       UV_Index=(int) UV_Watt;
-      DPRINT(" analog ");     DPRINTLN(lecturaUV);
-      DPRINT("/t UV Watt  ");DPRINTLN(UV_Watt);
-      DPRINT("/t UV index  ");DPRINTLN(UV_Index);
+      DPRINT(" analog ")     ; DPRINTLN(lecturaUV);
+      DPRINT("/t UV Watt  ") ; DPRINTLN(UV_Watt);
+      DPRINT("/t UV index  "); DPRINTLN(UV_Index);
       valores["indexUV"]=UV_Watt;
   #endif
 	if (humedadMin==humedadMax) humedadMax+=1;
