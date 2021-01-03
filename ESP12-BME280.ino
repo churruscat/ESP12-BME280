@@ -24,8 +24,8 @@
  * *****************************************/
 /* select sensor and its values */ 
 
-#include "pruebas.h"  
-//#include "salon.h"
+//#include "pruebas.h"  
+#include "salon.h"
 //#include "jardin.h"
 //#include "terraza.h"
 #include "mqtt_mosquitto.h"  /* mqtt values */
@@ -33,7 +33,7 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
-#ifdef CON_BME280
+#ifdef IS_BME280
    #define ACTUAL_BME280_ADDRESS BME280_ADDRESS_ALTERNATE   // (0x76)depends on sensor manufacturer
    //#define ACTUAL_BME280_ADDRESS BME280_ADDRESS           // (0x77)
 #else
@@ -52,7 +52,7 @@
 #define L_POR_BALANCEO 0.2794 // liter/m2 for evey rain gauge interrupt
 #include <Wire.h>             //libraries for sensors and so on
 #include <Adafruit_Sensor.h>
-#ifdef CON_BME280
+#ifdef IS_BME280
    #include <Adafruit_BME280.h>
    Adafruit_BME280 sensorBME280;     // this represents the sensor BME
 #else
@@ -121,7 +121,7 @@ boolean status;
   #endif
   wifiConnect();
   mqttConnect();
-  #ifdef CON_BME280
+  #ifdef IS_BME280
       sensorBME280.setSampling(Adafruit_BME280::MODE_NORMAL);
   #else
      sensorBME280.setSampling(Adafruit_BMP280::MODE_NORMAL);
@@ -177,7 +177,7 @@ boolean status;
   #endif  
   valores["temp"]=0;      
   valores["HPa"]=0;
-  #ifdef CON_BME280
+  #ifdef IS_BME280
       valores["hAire"]=0;
   #endif  
   claves["deviceId"]=DEVICE_ID;
@@ -263,7 +263,7 @@ boolean tomaDatos (){
         valores["hSuelo"]=humedadSuelo;    
     #endif
     // read from BME280 sensor
-    #ifdef CON_BME280
+    #ifdef IS_BME280
        humedadAire= sensorBME280.readHumidity();
     #endif   
     temperatura= sensorBME280.readTemperature();
@@ -279,7 +279,7 @@ boolean tomaDatos (){
        valores["l/m2"]=lluvia;     
     contadorPluvi=0;   
     #endif
-  #ifdef CON_UV
+    #ifdef CON_UV
       lecturaUV = analogRead(PIN_UV);
       UV_Watt=10/1.2*(3.3*lecturaUV/1023-1);  // mWatt/cm^2, at 2.2 V read there are 10mw/cm2
       UV_Index=(int) UV_Watt;
@@ -287,26 +287,30 @@ boolean tomaDatos (){
       DPRINT("/t UV Watt  ");DPRINTLN(UV_Watt);
       DPRINT("/t UV index  ");DPRINTLN(UV_Index);
       valores["indexUV"]=UV_Watt;
-  #endif
+    #endif
     if (temperatura==0 && presionHPa==0){ 
        escorrecto=false;  // read not correct
      DPRINTLN("all values are zero");
-    }   else {
+    } else {
 	    valores["HPa"]=(int)presionHPa;
-	    valores["temp"]=temperatura+0.001;
-	    #ifdef CON_BME280
-		    valores["hAire"]=(int)humedadAire;	    
-		    if (humedadAire>200 || humedadAire==0 || isnan(humedadAire)){
-		        valores["hAire"]=0;
-		        valores.remove("hAire");   // y values are out of range, donn't send them
-		    }
-	    #endif    
+      if (((int)temperatura-temperatura)==0){
+	        valores["temp"]=temperatura+0.001;
+      } else {    
+        valores["temp"]=temperatura;
+      }  
+    }
+    #ifdef IS_BME280
+	    valores["hAire"]=(int)humedadAire;	    
+	    if (humedadAire>200 || humedadAire==0 || isnan(humedadAire)){
+	        valores["hAire"]=0;
+	        valores.remove("hAire");   // y values are out of range, donn't send them	    
+	    }
+    #endif    
     if (temperatura > 90 || temperatura <-50|| isnan(temperatura)) {
         valores["temp"]=0;
         valores["HPa"]=0;      
         valores.remove("temp");
-        valores.remove("HPa");
-      }
+        valores.remove("HPa");    
     }
     escorrecto=true;
     return escorrecto;

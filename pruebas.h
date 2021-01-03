@@ -5,7 +5,7 @@
 #define LOCATION "Denia"
 #define DEVICE_ID "Cuarto"
 #define TOKEN "Token-de-Cuarto"
-#undef CON_BME280
+#undef IS_BME280
 #undef CON_SUELO   // con sensor de humedad del suelo
 #undef CON_UV
 #undef CON_LLUVIA

@@ -1,7 +1,7 @@
 #define LOCATION "Pozuelo"
 #define DEVICE_ID "Terraza"
 #define TOKEN "Token-dela-Terraza"
-#define CON_BME280
+#define IS_BME280
 #undef IP_FIJA
 #ifdef IP_FIJA
   byte ip[] = {192,168,1,32};   
@@ -14,4 +14,4 @@
 #define PRESSURE_CORRECTION (1.080)  // HPAo/HPHh 647m
 #define HUMEDAD_MIN  150  /* valores de A0 para suelo seco y empapado*/
 #define HUMEDAD_MAX  850
-#define INTERVALO_CONEX 55000 // 1 min en milisecs
+#define INTERVALO_CONEX 58000 // 1 min en milisecs
