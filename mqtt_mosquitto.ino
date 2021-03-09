@@ -130,7 +130,6 @@ void funcallback(char* topic, byte* payload, unsigned int payloadLength) {
  else if (strcmp (rebootTopic, topic) == 0) {
    DPRINTLN("Rearrancando...");    
    ESP.restart(); // this has issues, sometimes hangs
-   //ESP.reset();
  }
 }
 

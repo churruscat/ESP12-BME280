@@ -24,11 +24,8 @@
  * *****************************************/
 /* select sensor and its values */ 
 
-//#include "pruebas.h"  
-#include "salon.h"
-//#include "jardin.h"
-//#include "terraza.h"
 #include "mqtt_mosquitto.h"  /* mqtt values */
+//include "jardin.h"   // I prefer to move these (device) includes to "personal.h"
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
@@ -67,6 +64,7 @@
 volatile int contadorPluvi = 0; // must be 'volatile',for counting interrupt 
 volatile long lastTrigger=0;
 /* ********* these are the sensor variables that will be exposed **********/ 
+int numError=0;
 float lluvia=0;
 int humedadMin=HUMEDAD_MIN,
         humedadMax=HUMEDAD_MAX, 
@@ -231,7 +229,7 @@ boolean publicaDatos() {
     // and publish them.
     DPRINTLN("preparing to send");
     pubresult = enviaDatos(publishTopic,datosJson); 
-  if (!tomaDatos) ESP.restart();    
+  if (!tomaDatos) ; //ESP.restart();    
     if (pubresult){
         lluvia=0.0;      // data sent successfully, set rain to zero 
     }
@@ -241,7 +239,7 @@ boolean publicaDatos() {
 /* get data function. Read the sensors and set values in global variables */
 /* get data function. Read the sensors and set values in global variables */
 boolean tomaDatos (){
-    boolean escorrecto=false;  //return value will be false unless it works
+    boolean escorrecto=true;  //return value will be false unless it works
     float temperatura,humedadAire,presionHPa;
     int i=0;
     
@@ -289,8 +287,10 @@ boolean tomaDatos (){
       valores["indexUV"]=UV_Watt;
     #endif
     if (temperatura==0 && presionHPa==0){ 
-       escorrecto=false;  // read not correct
-     DPRINTLN("all values are zero");
+      valores.remove("temp");
+      valores.remove("HPa"); 
+      escorrecto=false;  // read not correct
+      DPRINTLN("all values are zero");
     } else {
 	    valores["HPa"]=(int)presionHPa;
       if (((int)temperatura-temperatura)==0){
@@ -302,16 +302,25 @@ boolean tomaDatos (){
     #ifdef IS_BME280
 	    valores["hAire"]=(int)humedadAire;	    
 	    if (humedadAire>200 || humedadAire==0 || isnan(humedadAire)){
-	        valores["hAire"]=0;
-	        valores.remove("hAire");   // y values are out of range, donn't send them	    
+	      valores["hAire"]=0;
+	      valores.remove("hAire");   // y values are out of range, donn't send them	    
 	    }
     #endif    
     if (temperatura > 90 || temperatura <-50|| isnan(temperatura)) {
         valores["temp"]=0;
         valores["HPa"]=0;      
         valores.remove("temp");
-        valores.remove("HPa");    
+        valores.remove("HPa"); 
+        escorrecto=false;           
     }
-    escorrecto=true;
+    /****************************************
+    if (!escorrecto) {
+      numError++;
+      if (numError >5) {
+         numError=0;
+         ESP.restart();
+      }  
+    }
+    *******************************************/
     return escorrecto;
 }

@@ -1,3 +1,4 @@
+#define POZUELO
 #define LOCATION "Pozuelo"
 #define DEVICE_ID "Terraza"
 #define TOKEN "Token-dela-Terraza"
