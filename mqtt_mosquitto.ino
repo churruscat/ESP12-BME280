@@ -68,7 +68,8 @@ int j=0;
   clienteMQTT.disconnect(); 
   espera(500);
   while(!wifiConnect()) {   
-    DPRINT("No connectivity, wait secs  ");DPRINTLN(int(intervaloConex/1000));
+    DPRINT("No connectivity, wait secs  ");
+    DPRINTLN(int(intervaloConex/1000));
     espera(intervaloConex);
   }
 }
@@ -81,17 +82,18 @@ void mqttConnect() {
  int j=0;
  
   if ((WiFi.status() == WL_CONNECTED )) {
-   while (!clienteMQTT.connect(clientId, authMethod, token)) {
-     if (WiFi.status() != WL_CONNECTED ) sinConectividad();      
-     DPRINT(j);DPRINTLN("  Retry connection to MQTT  ");
-     j++;
-     espera(2000);
-     if (j>20) {
+     while (!clienteMQTT.connect(clientId, authMethod, token) && j<20) {
+       if (WiFi.status() != WL_CONNECTED ) sinConectividad();      
+       DPRINT(j);DPRINTLN("  Retry connection to MQTT  ");
+       j++;
+       espera(2000);
+  /*     if (j>20) {
        sinConectividad();  
        j=0;
       }
+*/      
      }
-   } else {
+  } else {
     sinConectividad();   
   }
   initManagedDevice(); 
@@ -143,17 +145,18 @@ void handleUpdate(byte* payload) {
 
 /********** Send data to broker **************/
 
-boolean enviaDatos(char * topic, char * datos_) {
+boolean enviaDatos(char * topic, char * datos) {
   int k=0;
   boolean pubresult=false;  
   
- while (!clienteMQTT.loop() & k<20 ) {
+ while (!clienteMQTT.loop() && k<12 ) {
     DPRINTLN("Device was disconnected, reconnecting ");   
     mqttConnect();
     initManagedDevice();
+    espera(5000);
     k++; 
   }
-  pubresult = clienteMQTT.publish(topic,datos_);
+  pubresult = clienteMQTT.publish(topic,datos);
   DPRINT("Sending ");DPRINT(datosJson);
   DPRINT("to ");DPRINTLN(publishTopic);
   if (pubresult) 

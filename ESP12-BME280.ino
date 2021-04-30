@@ -11,13 +11,13 @@
 
 #define PRINT_SI
 #ifdef  PRINT_SI
-#define DPRINT(...)    Serial.print(__VA_ARGS__)
-#define DPRINTLN(...)  Serial.println(__VA_ARGS__)
-#define DPRINTF(...)   Serial.printf(__VA_ARGS__)
+  #define DPRINT(...)    Serial.print(__VA_ARGS__)
+  #define DPRINTLN(...)  Serial.println(__VA_ARGS__)
+  #define DPRINTF(...)   Serial.printf(__VA_ARGS__)
 #else
-#define DPRINT(...)     //blank line
-#define DPRINTLN(...)   //blank line
-#define DPRINTF(...)
+  #define DPRINT(...)     //blank line
+  #define DPRINTLN(...)   //blank line
+  #define DPRINTF(...)
 #endif
 /*************************************************
  ** -------- Personalised values ----------- **
@@ -25,7 +25,7 @@
 /* select sensor and its values */ 
 
 #include "mqtt_mosquitto.h"  /* mqtt values */
-//include "jardin.h"   // I prefer to move these (device) includes to "personal.h"
+//include "jardn.h"   // I moved these (device) includes to "personal.h"
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
@@ -51,10 +51,10 @@
 #include <Adafruit_Sensor.h>
 #ifdef IS_BME280
    #include <Adafruit_BME280.h>
-   Adafruit_BME280 sensorBME280;     // this represents the sensor BME
+   Adafruit_BME280 sensorBMX280;     // this represents the sensor BME
 #else
    #include <Adafruit_BMP280.h>
-   Adafruit_BMP280 sensorBME280;     // this represents the sensor BMP
+   Adafruit_BMP280 sensorBMX280;     // this represents the sensor BMP
 #endif
 #include "Pin_NodeMCU.h"
 
@@ -71,8 +71,8 @@ int humedadMin=HUMEDAD_MIN,
         humedadSuelo=0,humedadCrudo=HUMEDAD_MIN;
 int humedadCrudo1,humedadCrudo2,
         intervaloConex=INTERVALO_CONEX;
-#define JSONBUFFSIZE 250
-#define DATOSJSONSIZE 250   
+#define JSONBUFFSIZE 350
+#define DATOSJSONSIZE 350   
 char datosJson[DATOS_SIZE];
 StaticJsonDocument<DATOSJSONSIZE> docJson;
 JsonObject valores=docJson.createNestedObject();  //Read values
@@ -99,7 +99,7 @@ boolean status;
   Serial.begin(115200);
   DPRINTLN("starting ... "); 
   Wire.begin(SDA,SCL);
-  status = sensorBME280.begin(ACTUAL_BME280_ADDRESS);  
+  status = sensorBMX280.begin(ACTUAL_BME280_ADDRESS);  
   if (!status) {
      DPRINTLN("Can't connect to BME Sensor!  ");    
   }
@@ -120,9 +120,9 @@ boolean status;
   wifiConnect();
   mqttConnect();
   #ifdef IS_BME280
-      sensorBME280.setSampling(Adafruit_BME280::MODE_NORMAL);
+      sensorBMX280.setSampling(Adafruit_BME280::MODE_NORMAL);
   #else
-     sensorBME280.setSampling(Adafruit_BMP280::MODE_NORMAL);
+     sensorBMX280.setSampling(Adafruit_BMP280::MODE_NORMAL);
   #endif
   #ifdef CON_UV
     pinMode(PIN_UV, INPUT);
@@ -187,6 +187,7 @@ boolean status;
 uint32_t ultima=0;
 
 void loop() {
+  int i=0;
     DPRINT("#");
     if (!loopMQTT()) {  // Check if there are MQTT messages and if the device is connected  
         DPRINTLN("Connection lost; retrying");
@@ -195,13 +196,18 @@ void loop() {
     }
     ArduinoOTA.handle(); 
     if ((millis()-ultima)>intervaloConex) {   // if it is time to send data, do it
-    DPRINT("interval:");DPRINT(intervaloConex);
-    DPRINT("\tmillis :");DPRINT(millis());
-    DPRINT("\tultima :");DPRINTLN(ultima);
-    while (!publicaDatos()) {     // repeat until publicadatos sends data
+      DPRINT("interval:");DPRINT(intervaloConex);
+      DPRINT("\tmillis :");DPRINT(millis());
+      DPRINT("\tultima :");DPRINTLN(ultima);
+/*      while (!publicaDatos() && i<10) {     // repeat until publicadatos sends data
+        DPRINTLN("PublicaDatos returned false");
         espera(1000);        // publish data. This is the function that gets and sends
-        }   
-        ultima=millis();
+        i++;
+        }
+        i=0;
+        */
+      publicaDatos();
+      ultima=millis();
     }
     espera(1000); //and wait
 }
@@ -215,21 +221,11 @@ boolean publicaDatos() {
     char signo;
     boolean pubresult=true;
          
-    if (!tomaDatos()) {
-      valores["temp"]=0;      
-      valores["HPa"]=0;  
-      valores["hAire"]=0;    
-      valores.remove("temp");      
-      valores.remove("HPa");  
-      valores.remove("hAire");
-      serializeJson(docJson,datosJson);
-    } else {
-      serializeJson(docJson,datosJson);
-    }
+   tomaDatos();
+   serializeJson(docJson,datosJson);
     // and publish them.
     DPRINTLN("preparing to send");
     pubresult = enviaDatos(publishTopic,datosJson); 
-  if (!tomaDatos) ; //ESP.restart();    
     if (pubresult){
         lluvia=0.0;      // data sent successfully, set rain to zero 
     }
@@ -262,13 +258,19 @@ boolean tomaDatos (){
     #endif
     // read from BME280 sensor
     #ifdef IS_BME280
-       humedadAire= sensorBME280.readHumidity();
+       humedadAire= sensorBMX280.readHumidity();
+       if (isnan(humedadAire)){
+            humedadAire=200;
+       }
     #endif   
-    temperatura= sensorBME280.readTemperature();
-    presionHPa= sensorBME280.readPressure();
+    temperatura= sensorBMX280.readTemperature();
+    if (isnan(temperatura)){
+            temperatura=200;
+    }    
+    presionHPa= sensorBMX280.readPressure();
     if (!isnan(presionHPa)){
             presionHPa=presionHPa/100.0F*PRESSURE_CORRECTION;
-    }
+    } else presionHPa=0;
     #ifdef CON_LLUVIA 
         lluvia+=contadorPluvi*L_POR_BALANCEO;  
     if (lluvia==0) 
@@ -286,39 +288,33 @@ boolean tomaDatos (){
       DPRINT("/t UV index  ");DPRINTLN(UV_Index);
       valores["indexUV"]=UV_Watt;
     #endif
-    if (temperatura==0 && presionHPa==0){ 
-      valores.remove("temp");
-      valores.remove("HPa"); 
-      escorrecto=false;  // read not correct
-      DPRINTLN("all values are zero");
-    } else {
-	    valores["HPa"]=(int)presionHPa;
-      if (((int)temperatura-temperatura)==0){
-	        valores["temp"]=temperatura+0.001;
-      } else {    
-        valores["temp"]=temperatura;
-      }  
-    }
     #ifdef IS_BME280
 	    valores["hAire"]=(int)humedadAire;	    
-	    if (humedadAire>200 || humedadAire==0 || isnan(humedadAire)){
+	    if (humedadAire>100 || humedadAire==0){
 	      valores["hAire"]=0;
 	      valores.remove("hAire");   // y values are out of range, donn't send them	    
 	    }
     #endif    
-    if (temperatura > 90 || temperatura <-50|| isnan(temperatura)) {
+    if (temperatura > 90 || temperatura <-50) {
         valores["temp"]=0;
         valores["HPa"]=0;      
         valores.remove("temp");
         valores.remove("HPa"); 
         escorrecto=false;           
+    } else {
+     valores["HPa"]=(int)presionHPa;
+      if (((int)temperatura-temperatura)==0){
+          valores["temp"]=temperatura+0.001;
+      } else {    
+        valores["temp"]=temperatura;
+      }  
     }
     /****************************************
     if (!escorrecto) {
       numError++;
       if (numError >5) {
          numError=0;
-         ESP.restart();
+        // ESP.restart();
       }  
     }
     *******************************************/

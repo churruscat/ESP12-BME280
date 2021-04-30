@@ -1,14 +1,11 @@
+#define DENIA
+#define LOCATION "Denia"
+#define DEVICE_ID "Cuarto"
+#define TOKEN "Token-del-Cuarto"
+
 #undef CON_SUELO
-#define POZUELO
-#define LOCATION "Pozuelo"
-#define CON_SUELO 
-#define PRESSURE_CORRECTION (1.080)  // HPAo/HPHh 647m
 #define IS_BME280
-
-
-#define DEVICE_ID "Salon"
-#define TOKEN "Token-del-Salon"
-
+#define PRESSURE_CORRECTION (1.0027)  // HPAo/HPHh 18m +corrección sensor
 #undef IP_FIJA
 #ifdef IP_FIJA
   byte ip[] = {192,168,1,31};   
