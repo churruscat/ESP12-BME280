@@ -218,7 +218,6 @@ void loop() {
 *********************************************/
 boolean publicaDatos() {
     int k=0;
-    char signo;
     boolean pubresult=true;
          
    tomaDatos();
